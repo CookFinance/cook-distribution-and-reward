@@ -1,0 +1,12 @@
+**/node_modules
+**/cache
+**/artifacts
+**/typechain
+
+hardhat.config.ts
+
+node_modules
+
+#Hardhat files
+cache
+artifacts
