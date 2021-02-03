@@ -21,6 +21,11 @@ contract Pool is PoolSetters {
     event Harvest(address indexed account, uint256 cookAmount);
 
     function stake(uint256 value) external {
+        require(
+            value > 0,
+            "zero stake amount"
+        );
+
         calculateNewRewardSinceLastRewardBlock();
 
         uint256 totalRewardedWithPhantom = totalRewarded().add(totalPhantom());
@@ -44,7 +49,7 @@ contract Pool is PoolSetters {
             if (totalStaked() != 0) {
                 uint256 currentBlock = blockNumber;
                 uint256 numOfBlocks = currentBlock.sub(lastRewardBlock);
-                uint256 rewardAmount = numOfBlocks.mul(Constants.getRewardPerBlock());
+                uint256 rewardAmount = numOfBlocks.mul(getRewardPerBlock());
                 dollar().mint(address(this), rewardAmount);
                 incrementTotalRewarded(rewardAmount);
             }
@@ -54,6 +59,11 @@ contract Pool is PoolSetters {
     }
 
     function unstake(uint256 value) external {
+        require(
+            value > 0,
+            "zero unstake amount"
+        );
+
         uint256 stakedBalance = balanceOfStaked(msg.sender);
         uint256 unstakableBalance = balanceOfUnstakable(msg.sender);
         require(
@@ -79,6 +89,11 @@ contract Pool is PoolSetters {
 
     function harvest(uint256 value) external {
         require(
+            value > 0,
+            "zero harvest amount"
+        );
+
+        require(
             totalRewarded() > 0,
             "insufficient total rewarded"
         );
@@ -98,6 +113,11 @@ contract Pool is PoolSetters {
     }
 
     function claim(uint256 value) external {
+        require(
+            value > 0,
+            "zero claim amount"
+        );
+
         require(
             balanceOfClaimable(msg.sender) >= value,
             "insufficient claimable balance"

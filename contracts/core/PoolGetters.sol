@@ -8,7 +8,7 @@ import "../mock/MockCOOK.sol";
 
 contract PoolGetters is PoolState {
     using SafeMath for uint256;
-    uint32 private constant SECONDS_PER_DAY = 30; /* 86400 seconds in a day */
+    uint32 private constant SECONDS_PER_DAY = 86400; /* 86400 seconds in a day */
 
     /**
      * Global
@@ -45,16 +45,15 @@ contract PoolGetters is PoolState {
         return _state.lastRewardBlock;
     }
 
+    // Overridable for testing
     function getStakeLockupDuration() virtual public view returns (uint256) {
         return Constants.getStakeLockupDuration();
     }
 
-    function getRewardPerBlock() public view returns (uint256) {
+    function getRewardPerBlock() virtual public view returns (uint256) {
         return Constants.getRewardPerBlock();
     }
 
-
-    // Overridable for testing
     function blockNumber() virtual internal view returns (uint256) {
         return block.number;
     }

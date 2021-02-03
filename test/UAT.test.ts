@@ -16,6 +16,7 @@ const getAddress = async(signer:Signer) => {
 }
 
 const INITIAL_STAKE_MULTIPLE = 1e6;
+const REWARD_PER_BLOCK = 1000;
 const STAKE_LOCKUP_DURATION = 30;
 
 describe("Pool", function () {
@@ -63,6 +64,8 @@ describe("Pool", function () {
 
     poolInstance = (await poolFactory.deploy(cookInstance.address, univ2Insatnce.address)) as MockPool;
     this.pool = await poolInstance.deployed();
+    await this.pool.setRewardPerBlock(REWARD_PER_BLOCK);
+    await this.pool.setStakeLockupDuration(STAKE_LOCKUP_DURATION);
   });
 
   describe('UAT Test Cases [Pool]', function () {
@@ -73,197 +76,178 @@ describe("Pool", function () {
       await this.pool.setBlockNumber(0);
       console.log("block timestamp ", initialTimestamp);
       await this.pool.setBlockTimestamp(initialTimestamp);
-    });
 
-    it('block number should be 0', async function () {
       expect(await this.pool.blockNumberE()).to.be.equal(0);
-    });
-
-    it('last reward block should be 0', async function () {
       expect(await this.pool.lastRewardBlock()).to.be.equal(0);
     });
 
-    it('long story', async function() {
-      console.log("A stakes 10");
-      await this.univ2.faucet(addrUserA, 10);
-      await this.univ2.connect(userA).approve(this.pool.address, 10);
-      await this.pool.connect(userA).stake(10);
+    describe('with no lockup', function() {
+      beforeEach('set stake lockup duration to 0 and userA stakes some amount', async function () {
+        await this.pool.setStakeLockupDuration(0);
+      });
 
-      expect(await this.univ2.balanceOf(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(10);
-      expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
-      expect(await this.pool.totalRewarded()).to.be.equal(0);
-      expect(await this.pool.totalStaked()).to.be.equal(10);
-      expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE*10);
-      expect(await this.pool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE*10);
+      it('staked and unstakable balances should be correct', async function() {
+        console.log("A stakes 10");
+        await this.univ2.faucet(addrUserA, 10);
+        await this.univ2.connect(userA).approve(this.pool.address, 10);
+        await this.pool.connect(userA).stake(10);
 
-      console.log("block moves from 0 to 2");
-      await this.pool.setBlockNumber(2);
-      let newTimestamp = initialTimestamp + (86400 * STAKE_LOCKUP_DURATION / 2);
-      console.log("block timestamp ", newTimestamp);
-      await this.pool.setBlockTimestamp(newTimestamp);
-      expect(await this.pool.blockNumberE()).to.be.equal(2);
-      expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
+        expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(10);
+        expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(10);
+        expect(await this.pool.totalStaked()).to.be.equal(10);
 
-      console.log("B stakes 20");
-      await this.univ2.faucet(addrUserB, 20);
-      await this.univ2.connect(userB).approve(this.pool.address, 20);
-      await this.pool.connect(userB).stake(20);
+        console.log("block moves from 0 to 1");
+        await this.pool.setBlockNumber(1);
+        console.log("A stakes 15");
+        await this.univ2.faucet(addrUserA, 15);
+        await this.univ2.connect(userA).approve(this.pool.address, 15);
+        await this.pool.connect(userA).stake(15);
 
-      expect(await this.univ2.balanceOf(addrUserB)).to.be.equal(0);
-      expect(await this.pool.balanceOfStaked(addrUserB)).to.be.equal(20);
-      expect(await this.pool.balanceOfUnstakable(addrUserB)).to.be.equal(0);
-      expect(await this.pool.totalRewarded()).to.be.equal(2);
-      expect(await this.pool.totalStaked()).to.be.equal(30);
-      expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(2);
-      expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(0);
-      expect(await this.pool.balanceOfPhantom(addrUserB)).to.be.equal(4 + INITIAL_STAKE_MULTIPLE*20);
-      expect(await this.pool.totalPhantom()).to.be.equal(4 + INITIAL_STAKE_MULTIPLE*30);
+        expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(25);
+        expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(25);
+        expect(await this.pool.totalStaked()).to.be.equal(25);
 
-      console.log("A tries to harvest 3 rewards");
-      await expect(this.pool.connect(userA).harvest(3)).to.be.revertedWith("insufficient rewarded balance");
+        console.log("block moves from 1 to 2");
+        await this.pool.setBlockNumber(2);
+        console.log("B stakes 5");
+        await this.univ2.faucet(addrUserB, 5);
+        await this.univ2.connect(userB).approve(this.pool.address, 5);
+        await this.pool.connect(userB).stake(5);
 
-      console.log("A harvests 1 reward");
-      await this.pool.connect(userA).harvest(1);
-      expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(1);
-      expect(await this.pool.totalVesting()).to.be.equal(1);
-      expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(1);
-      expect(await this.pool.totalRewarded()).to.be.equal(1);
-      expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(1 + INITIAL_STAKE_MULTIPLE*10);
-      expect(await this.pool.totalPhantom()).to.be.equal(5 + INITIAL_STAKE_MULTIPLE*30);
+        expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(25);
+        expect(await this.pool.balanceOfStaked(addrUserB)).to.be.equal(5);
+        expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(25);
+        expect(await this.pool.balanceOfUnstakable(addrUserB)).to.be.equal(5);
+        expect(await this.pool.totalStaked()).to.be.equal(30);
 
-      console.log("block moves from 2 to 32");
-      await this.pool.setBlockNumber(32);
-      newTimestamp = initialTimestamp + (86400 * STAKE_LOCKUP_DURATION);
-      console.log("block timestamp ", newTimestamp);
-      await this.pool.setBlockTimestamp(newTimestamp);
-      expect(await this.pool.blockNumberE()).to.be.equal(32);
-      expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(10);
-      expect(await this.pool.balanceOfUnstakable(addrUserB)).to.be.equal(0);
+        console.log("block moves from 2 to 3");
+        await this.pool.setBlockNumber(3);
+        console.log("A unstakes 20");
+        await this.pool.connect(userA).unstake(20);
 
-      console.log("C stakes 30");
-      await this.univ2.faucet(addrUserC, 30);
-      await this.univ2.connect(userC).approve(this.pool.address, 30);
-      await this.pool.connect(userC).stake(30);
+        expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(5);
+        expect(await this.pool.balanceOfStaked(addrUserB)).to.be.equal(5);
+        expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(5);
+        expect(await this.pool.balanceOfUnstakable(addrUserB)).to.be.equal(5);
+        expect(await this.pool.totalStaked()).to.be.equal(10);
+      });
 
-      expect(await this.univ2.balanceOf(addrUserC)).to.be.equal(0);
-      expect(await this.pool.balanceOfStaked(addrUserC)).to.be.equal(30);
-      expect(await this.pool.balanceOfUnstakable(addrUserC)).to.be.equal(0);
-      expect(await this.pool.totalRewarded()).to.be.equal(31);
-      expect(await this.pool.totalStaked()).to.be.equal(60);
-      expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(11);
-      expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(10);
-      expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(20);
-      expect(await this.pool.balanceOfUnstakable(addrUserB)).to.be.equal(0);
-      expect(await this.pool.balanceOfRewarded(addrUserC)).to.be.equal(0);
-      expect(await this.pool.balanceOfPhantom(addrUserC)).to.be.equal(36 + INITIAL_STAKE_MULTIPLE*30);
-      expect(await this.pool.totalPhantom()).to.be.equal(41 + INITIAL_STAKE_MULTIPLE*60);
+      it('rewarded balance should be correct', async function() {
+        console.log("A stakes 10");
+        await this.pool.setBlockNumber(0);
+        await this.univ2.faucet(addrUserA, 10);
+        await this.univ2.connect(userA).approve(this.pool.address, 10);
+        await this.pool.connect(userA).stake(10);
 
-      console.log("A harvets 5");
-      await this.pool.connect(userA).harvest(5);
-      expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(6);
-      expect(await this.pool.totalVesting()).to.be.equal(6);
-      expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(6);
-      expect(await this.pool.totalRewarded()).to.be.equal(26);
-      expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(6 + INITIAL_STAKE_MULTIPLE*10);
-      expect(await this.pool.totalPhantom()).to.be.equal(46 + INITIAL_STAKE_MULTIPLE*60);
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(0);
+        expect(await this.pool.totalRewarded()).to.be.equal(0);
 
-      console.log("B harvets 9");
-      await this.pool.connect(userB).harvest(9);
-      expect(await this.pool.balanceOfClaimable(addrUserB)).to.be.equal(0);
-      expect(await this.pool.balanceOfVesting(addrUserB)).to.be.equal(9);
-      expect(await this.pool.totalVesting()).to.be.equal(15);
-      expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(11);
-      expect(await this.pool.totalRewarded()).to.be.equal(17);
-      expect(await this.pool.balanceOfPhantom(addrUserB)).to.be.equal(13 + INITIAL_STAKE_MULTIPLE*20);
-      expect(await this.pool.totalPhantom()).to.be.equal(55 + INITIAL_STAKE_MULTIPLE*60);
+        console.log("block moves from 0 to 2");
+        await this.pool.setBlockNumber(2);
+        console.log("A stakes 15");
+        await this.univ2.faucet(addrUserA, 15);
+        await this.univ2.connect(userA).approve(this.pool.address, 15);
+        await this.pool.connect(userA).stake(15);
 
-      console.log("block moves from 32 to 38");
-      await this.pool.setBlockNumber(38);
-      newTimestamp = initialTimestamp + (86400 * STAKE_LOCKUP_DURATION * 3 / 2);
-      console.log("block timestamp ", newTimestamp);
-      await this.pool.setBlockTimestamp(newTimestamp);
-      expect(await this.pool.blockNumberE()).to.be.equal(38);
-      expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(10);
-      expect(await this.pool.balanceOfUnstakable(addrUserB)).to.be.equal(20);
-      expect(await this.pool.balanceOfUnstakable(addrUserC)).to.be.equal(0);
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(2*REWARD_PER_BLOCK);
+        expect(await this.pool.totalRewarded()).to.be.equal(2*REWARD_PER_BLOCK);
 
-      console.log("A unstakes 10");
-      await this.pool.connect(userA).unstake(10);
+        console.log("block moves from 2 to 5");
+        await this.pool.setBlockNumber(5);
+        console.log("B stakes 5");
+        await this.univ2.faucet(addrUserB, 5);
+        await this.univ2.connect(userB).approve(this.pool.address, 5);
+        await this.pool.connect(userB).stake(5);
 
-      expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
-      expect(await this.pool.totalRewarded()).to.be.equal(16);
-      expect(await this.pool.totalStaked()).to.be.equal(50);
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(5*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(0);
+        expect(await this.pool.totalRewarded()).to.be.equal(5*REWARD_PER_BLOCK);
 
-      expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(13);
-      expect(await this.pool.totalVesting()).to.be.equal(22);
-      expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(13);
-      expect(await this.pool.balanceOfClaimable(addrUserB)).to.be.equal(0);
-      expect(await this.pool.balanceOfUnstakable(addrUserB)).to.be.equal(20);
-      expect(await this.pool.balanceOfRewarded(addrUserC)).to.be.equal(3);
-      expect(await this.pool.balanceOfClaimable(addrUserC)).to.be.equal(0);
-      expect(await this.pool.balanceOfUnstakable(addrUserC)).to.be.equal(0);
-      expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(0);
-      expect(await this.pool.totalPhantom()).to.be.equal(49 + INITIAL_STAKE_MULTIPLE*50);
+        console.log("block moves from 5 to 35");
+        await this.pool.setBlockNumber(35);
+        console.log("A unstakes 20");
+        await this.pool.connect(userA).unstake(20);
 
-      console.log("B harvests 12");
-      await this.pool.connect(userB).harvest(12);
-      expect(await this.pool.balanceOfClaimable(addrUserB)).to.be.equal(0);
-      expect(await this.pool.balanceOfVesting(addrUserB)).to.be.equal(21);
-      expect(await this.pool.totalVesting()).to.be.equal(34);
-      expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(1);
-      expect(await this.pool.totalRewarded()).to.be.equal(4);
-      expect(await this.pool.balanceOfPhantom(addrUserB)).to.be.equal(25 + INITIAL_STAKE_MULTIPLE*20);
-      expect(await this.pool.totalPhantom()).to.be.equal(61 + INITIAL_STAKE_MULTIPLE*50);
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(6*REWARD_PER_BLOCK); //30-30*(20/25)
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(24*REWARD_PER_BLOCK); //30*(20/25)
+        expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(5*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfVesting(addrUserB)).to.be.equal(0);
+        expect(await this.pool.totalRewarded()).to.be.equal(11*REWARD_PER_BLOCK);
+        expect(await this.pool.totalVesting()).to.be.equal(24*REWARD_PER_BLOCK);
 
-      console.log("C harvests 3");
-      await this.pool.connect(userC).harvest(3);
-      expect(await this.pool.balanceOfClaimable(addrUserC)).to.be.equal(0);
-      expect(await this.pool.balanceOfVesting(addrUserC)).to.be.equal(3);
-      expect(await this.pool.totalVesting()).to.be.equal(37);
-      expect(await this.pool.balanceOfRewarded(addrUserC)).to.be.equal(0);
-      expect(await this.pool.totalRewarded()).to.be.equal(1);
-      expect(await this.pool.balanceOfPhantom(addrUserC)).to.be.equal(39 + INITIAL_STAKE_MULTIPLE*30);
-      expect(await this.pool.totalPhantom()).to.be.equal(64 + INITIAL_STAKE_MULTIPLE*50);
+        console.log("block moves from 35 to 37");
+        await this.pool.setBlockNumber(37);
+        console.log("B unstake 5");
+        await this.pool.connect(userB).unstake(5);
 
-      console.log("block moves from 38 to 138");
-      await this.pool.setBlockNumber(138);
-      newTimestamp = initialTimestamp + (86400 * STAKE_LOCKUP_DURATION * 2);
-      console.log("block timestamp ", newTimestamp);
-      await this.pool.setBlockTimestamp(newTimestamp);
-      expect(await this.pool.blockNumberE()).to.be.equal(138);
-      expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfUnstakable(addrUserB)).to.be.equal(20);
-      expect(await this.pool.balanceOfUnstakable(addrUserC)).to.be.equal(30);
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(7*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(24*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(0);
+        expect(await this.pool.balanceOfVesting(addrUserB)).to.be.equal(6*REWARD_PER_BLOCK);
+        expect(await this.pool.totalRewarded()).to.be.equal(7*REWARD_PER_BLOCK);
+        expect(await this.pool.totalVesting()).to.be.equal(30*REWARD_PER_BLOCK);
+      });
 
-      console.log("D stakes 50");
-      await this.univ2.faucet(addrUserD, 50);
-      await this.univ2.connect(userD).approve(this.pool.address, 50);
-      await this.pool.connect(userD).stake(50);
+      it('claimable and claimed balance should be correct', async function() {
+        console.log("A stakes 10");
+        await this.univ2.faucet(addrUserA, 25);
+        await this.univ2.connect(userA).approve(this.pool.address, 25);
+        await this.pool.connect(userA).stake(10);
 
-      expect(await this.pool.balanceOfStaked(addrUserD)).to.be.equal(50);
-      expect(await this.pool.totalRewarded()).to.be.equal(101);
-      expect(await this.pool.totalStaked()).to.be.equal(100);
-      expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(41);
-      expect(await this.pool.balanceOfClaimable(addrUserB)).to.be.equal(1);
-      expect(await this.pool.balanceOfUnstakable(addrUserB)).to.be.equal(20);
-      expect(await this.pool.balanceOfRewarded(addrUserC)).to.be.equal(60);
-      expect(await this.pool.balanceOfClaimable(addrUserC)).to.be.equal(0);
-      expect(await this.pool.balanceOfUnstakable(addrUserC)).to.be.equal(30);
-      expect(await this.pool.balanceOfRewarded(addrUserD)).to.be.equal(0);
-      expect(await this.pool.balanceOfClaimable(addrUserD)).to.be.equal(0);
-      expect(await this.pool.balanceOfUnstakable(addrUserD)).to.be.equal(0);
-      expect(await this.pool.balanceOfPhantom(addrUserD)).to.be.equal(165 + INITIAL_STAKE_MULTIPLE*50);
-      expect(await this.pool.totalPhantom()).to.be.equal(229 + INITIAL_STAKE_MULTIPLE*100);
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(0);
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(0);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
+        expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(0);
+
+        console.log("block moves from 0 to 12");
+        await this.pool.setBlockNumber(12);
+        console.log("A stakes 15");
+        await this.pool.connect(userA).stake(15);
+
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(12*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(0);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
+        expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(0);
+
+        console.log("A harvests half of the reward");
+        await this.pool.connect(userA).harvest(6*REWARD_PER_BLOCK);
+
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(6*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(6*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
+        expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(0);
+
+        console.log("Advance less than month");
+        await this.pool.setBlockTimestamp(initialTimestamp + (86400 * 10));
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(6*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
+        expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(0);
+
+        console.log("Advance 1 month");
+        await this.pool.setBlockTimestamp(initialTimestamp + (86400 * 30));
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(6*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(1*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(0);
+
+        console.log("Advance 3 months");
+        await this.pool.setBlockTimestamp(initialTimestamp + (86400 * 90));
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(6*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(3*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(0);
+
+        console.log("A claims 2/3 of the reward");
+        await this.pool.connect(userA).claim(2*REWARD_PER_BLOCK);
+
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(6*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(1*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(2*REWARD_PER_BLOCK);
+
+        console.log("Advance 6 months");
+        await this.pool.setBlockTimestamp(initialTimestamp + (86400 * 180));
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(6*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(4*REWARD_PER_BLOCK);
+        expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(2*REWARD_PER_BLOCK);
+      });
     });
   });
 });

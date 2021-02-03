@@ -69,7 +69,7 @@ contract CookDistribution is Ownable {
 
   // Date-related constants for sanity-checking dates to reject obvious erroneous inputs
   // SECONDS_PER_DAY = 30 for test only
-  uint32 private constant SECONDS_PER_DAY = 30;  /* 86400 seconds in a day */
+  uint32 private constant SECONDS_PER_DAY = 86400;  /* 86400 seconds in a day */
 
   uint256[] private _priceKey;
   uint256[] private _percentageValue;
