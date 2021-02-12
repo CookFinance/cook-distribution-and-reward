@@ -2,16 +2,18 @@ pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+import '../external/UniswapV2Library.sol';
 import "./Constants.sol";
 import "./PoolSetters.sol";
+import "./IPool.sol";
 import "hardhat/console.sol";
-import "../mock/MockCOOK.sol";
 
-contract Pool is PoolSetters {
+contract Pool is PoolSetters, IPool {
     using SafeMath for uint256;
 
     constructor(address dollar, address univ2) public {
-        _state.provider.dollar = MockCOOK(dollar); //COOK
+        _state.provider.dollar = IERC20(dollar); //COOK
         _state.provider.univ2 = IERC20(univ2); //univ2 pair COOK/WETH
     }
 
@@ -19,10 +21,21 @@ contract Pool is PoolSetters {
     event Unstake(address indexed account, uint256 univ2Amount);
     event Claim(address indexed account, uint256 cookAmount);
     event Harvest(address indexed account, uint256 cookAmount);
+    event Zap(address indexed account, uint256 cookAmount, uint256 lessWeth, uint256 newUniv2);
 
-    function stake(uint256 value) external {
+
+    function stake(uint256 univ2Amount) override external {
+
+        updateStakeStates(univ2Amount, msg.sender);
+        univ2().transferFrom(msg.sender, address(this), univ2Amount);
+        uniBalanceCheck();
+
+        emit Stake(msg.sender, univ2Amount);
+    }
+
+    function updateStakeStates(uint256 univ2Amount, address userAddress) internal {
         require(
-            value > 0,
+            univ2Amount > 0,
             "zero stake amount"
         );
 
@@ -30,16 +43,20 @@ contract Pool is PoolSetters {
 
         uint256 totalRewardedWithPhantom = totalRewarded().add(totalPhantom());
         uint256 newPhantom = totalStaked() == 0 ?
-            totalRewarded() == 0 ? Constants.getInitialStakeMultiple().mul(value) : 0 :
-            totalRewardedWithPhantom.mul(value).div(totalStaked());
+            totalRewarded() == 0 ? Constants.getInitialStakeMultiple().mul(univ2Amount) : 0 :
+            totalRewardedWithPhantom.mul(univ2Amount).div(totalStaked());
 
-        incrementBalanceOfStaked(msg.sender, value);
-        incrementBalanceOfPhantom(msg.sender, newPhantom);
+        incrementBalanceOfStaked(userAddress, univ2Amount);
+        incrementBalanceOfPhantom(userAddress, newPhantom);
+    }
 
-        univ2().transferFrom(msg.sender, address(this), value);
+    function zapStake(uint256 univ2Amount, address userAddress) override external {
+
+        updateStakeStates(univ2Amount, userAddress);
+        univ2().transferFrom(msg.sender, address(this), univ2Amount);
         uniBalanceCheck();
 
-        emit Stake(msg.sender, value);
+        emit Stake(userAddress, univ2Amount);
     }
 
     function calculateNewRewardSinceLastRewardBlock() virtual internal {
@@ -50,7 +67,6 @@ contract Pool is PoolSetters {
                 uint256 currentBlock = blockNumber;
                 uint256 numOfBlocks = currentBlock.sub(lastRewardBlock);
                 uint256 rewardAmount = numOfBlocks.mul(getRewardPerBlock());
-                dollar().mint(address(this), rewardAmount);
                 incrementTotalRewarded(rewardAmount);
             }
             updateLastRewardBlock(blockNumber);
@@ -58,38 +74,38 @@ contract Pool is PoolSetters {
         dollarBalanceCheck();
     }
 
-    function unstake(uint256 value) external {
+    function unstake(uint256 univ2Amount) external override {
         require(
-            value > 0,
+            univ2Amount > 0,
             "zero unstake amount"
         );
 
         uint256 stakedBalance = balanceOfStaked(msg.sender);
         uint256 unstakableBalance = balanceOfUnstakable(msg.sender);
         require(
-            unstakableBalance >= value,
+            unstakableBalance >= univ2Amount,
             "insufficient unstakable balance"
         );
 
         calculateNewRewardSinceLastRewardBlock();
 
-        uint256 newClaimable = balanceOfRewarded(msg.sender).mul(value).div(stakedBalance);
-        uint256 lessPhantom = balanceOfPhantom(msg.sender).mul(value).div(stakedBalance);
+        uint256 newClaimable = balanceOfRewarded(msg.sender).mul(univ2Amount).div(stakedBalance);
+        uint256 lessPhantom = balanceOfPhantom(msg.sender).mul(univ2Amount).div(stakedBalance);
 
         addToVestingSchdule(msg.sender, newClaimable);
         decrementTotalRewarded(newClaimable, "insufficient rewarded balance");
-        decrementBalanceOfStaked(msg.sender, value, "insufficient staked balance");
+        decrementBalanceOfStaked(msg.sender, univ2Amount, "insufficient staked balance");
         decrementBalanceOfPhantom(msg.sender, lessPhantom, "insufficient phantom balance");
 
-        univ2().transfer(msg.sender, value);
+        univ2().transfer(msg.sender, univ2Amount);
         uniBalanceCheck();
-        
-        emit Unstake(msg.sender, value);
+
+        emit Unstake(msg.sender, univ2Amount);
     }
 
-    function harvest(uint256 value) external {
+    function harvest(uint256 cookAmount) external override {
         require(
-            value > 0,
+            cookAmount > 0,
             "zero harvest amount"
         );
 
@@ -97,36 +113,78 @@ contract Pool is PoolSetters {
             totalRewarded() > 0,
             "insufficient total rewarded"
         );
-        
+
         require(
-            balanceOfRewarded(msg.sender) >= value,
+            balanceOfRewarded(msg.sender) >= cookAmount,
             "insufficient rewarded balance"
         );
 
-        addToVestingSchdule(msg.sender, value);
-        decrementTotalRewarded(value, "insufficient rewarded balance");
-        incrementBalanceOfPhantom(msg.sender, value);
+        addToVestingSchdule(msg.sender, cookAmount);
+        decrementTotalRewarded(cookAmount, "insufficient rewarded balance");
+        incrementBalanceOfPhantom(msg.sender, cookAmount);
 
         dollarBalanceCheck();
 
-        emit Harvest(msg.sender, value);
+        emit Harvest(msg.sender, cookAmount);
     }
 
-    function claim(uint256 value) external {
+    function claim(uint256 cookAmount) external override {
         require(
-            value > 0,
+            cookAmount > 0,
             "zero claim amount"
         );
 
         require(
-            balanceOfClaimable(msg.sender) >= value,
+            balanceOfClaimable(msg.sender) >= cookAmount,
             "insufficient claimable balance"
         );
 
-        dollar().transfer(msg.sender, value);
-        incrementBalanceOfClaimed(msg.sender, value);
+        dollar().transfer(msg.sender, cookAmount);
+        incrementBalanceOfClaimed(msg.sender, cookAmount);
 
-        emit Claim(msg.sender, value);
+        emit Claim(msg.sender, cookAmount);
+    }
+
+    function addLiquidity(uint256 cookAmount) internal returns (uint256, uint256) {
+        IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
+
+        uint reserve0;
+        uint reserve1;
+        address weth;
+        if(lpPair.token0() == address(dollar())) {
+            (reserve0, reserve1,) = lpPair.getReserves();
+            weth = lpPair.token1();
+        } else {
+            (reserve1, reserve0,) = lpPair.getReserves();
+            weth = lpPair.token0();
+        }
+
+        uint256 wethAmount = (reserve0 == 0 && reserve1 == 0) ?
+            cookAmount :
+            UniswapV2Library.quote(cookAmount, reserve0, reserve1);
+
+        dollar().transfer(address(univ2()), cookAmount);
+        IERC20(weth).transferFrom(msg.sender, address(univ2()), wethAmount);
+
+        return (wethAmount, lpPair.mint(address(this)));
+    }
+
+    function zap(uint256 cookAmount) external {
+        require(
+            cookAmount > 0,
+            "zero zap amount"
+        );
+
+        require(
+            balanceOfClaimable(msg.sender) >= cookAmount,
+            "insufficient claimable balancex"
+        );
+        (uint256 lessWeth, uint256 newUniv2) = addLiquidity(cookAmount);
+        incrementBalanceOfClaimed(msg.sender, cookAmount);
+        updateStakeStates(newUniv2, msg.sender);
+        uniBalanceCheck();
+
+        emit Zap(msg.sender, cookAmount, lessWeth, newUniv2);
     }
 
     function uniBalanceCheck() private view {

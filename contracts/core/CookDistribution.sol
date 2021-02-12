@@ -1,11 +1,14 @@
 pragma solidity ^0.6.2;
 
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import "../oracle/IOracle.sol";
 import "../oracle/IPriceConsumerV3.sol";
+import "./IPool.sol";
 import "hardhat/console.sol";
+import '../external/UniswapV2Library.sol';
 
 /**
  * @title TokenVesting
@@ -15,8 +18,6 @@ import "hardhat/console.sol";
  */
 contract CookDistribution is Ownable {
   using SafeMath for uint256;
-  using SafeERC20 for IERC20;
-
 
   event AllocationRegistered(
       address indexed beneficiary,
@@ -70,6 +71,7 @@ contract CookDistribution is Ownable {
   // Date-related constants for sanity-checking dates to reject obvious erroneous inputs
   // SECONDS_PER_DAY = 30 for test only
   uint32 private constant SECONDS_PER_DAY = 86400;  /* 86400 seconds in a day */
+  uint256 MAX_INT = 2**256 - 1;
 
   uint256[] private _priceKey;
   uint256[] private _percentageValue;
@@ -135,6 +137,7 @@ contract CookDistribution is Ownable {
     _priceConsumer = IPriceConsumerV3(priceConsumer_);
     _lastPriceUnlockDay = 0;
     _nextPriceUnlockStep = 0;
+
 
     // init price percentage
 
@@ -219,6 +222,17 @@ contract CookDistribution is Ownable {
     return totalAvailable;
   }
 
+  function getUserAvailableAmount(address userAddress, uint256 onDayOrToday) public view returns (uint256 amountAvailable) {
+      uint256 onDay = _effectiveDay(onDayOrToday);
+      uint256 avalible = _getVestedAmount(userAddress,onDay).sub(_beneficiaryAllocations[userAddress].released);
+      return avalible;
+  }
+
+  function getUserVestedAmount(address userAddress, uint256 onDayOrToday) public view returns (uint256 amountVested) {
+      uint256 onDay = _effectiveDay(onDayOrToday);
+      return _getVestedAmount(userAddress,onDay);
+
+  }
 
   /**
      * @dev returns the day number of the current day, in days since the UNIX epoch.
@@ -277,16 +291,6 @@ contract CookDistribution is Ownable {
     }
 
 
-    function getUserAvailableAmount(address userAddress, uint256 onDayOrToday) public view returns (uint256 amountAvailable) {
-        uint256 onDay = _effectiveDay(onDayOrToday);
-        uint256 avalible = _getVestedAmount(userAddress,onDay).sub(_beneficiaryAllocations[userAddress].released);
-        return avalible;
-    }
-
-
-
-
-
   /**
     withdraw function
    */
@@ -304,7 +308,7 @@ contract CookDistribution is Ownable {
 
     _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[userAddress].released.add(withdrawAmount);
 
-    _token.safeTransfer(userAddress, withdrawAmount);
+    _token.transfer(userAddress, withdrawAmount);
 
     emit TokensWithdrawal(userAddress, withdrawAmount);
   }
@@ -379,4 +383,61 @@ contract CookDistribution is Ownable {
   function _getPricePercentage(uint256 priceKey) internal view returns (uint256 percentageValue) {
     return _pricePercentageMapping[priceKey];
   }
+
+  function addLiquidity(uint256 cookAmount) internal returns (uint256, uint256) {
+      // get pair address
+      IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
+      uint reserve0;
+      uint reserve1;
+      if(lpPair.token0() == address(_token)){
+        (reserve0, reserve1,) = lpPair.getReserves();
+      } else {
+        (reserve1, reserve0,) = lpPair.getReserves();
+      }
+
+      uint256 wethAmount = (reserve0 == 0 && reserve1 == 0) ?
+           cookAmount :
+           UniswapV2Library.quote(cookAmount, reserve0, reserve1);
+
+
+      _token.transfer(_oracle.pairAddress(), cookAmount);
+
+      if(lpPair.token0() == address(_token)){
+        // token0 == cook, token1 == weth
+        require(IERC20(lpPair.token1()).balanceOf(msg.sender) >= wethAmount,"insufficient weth balance");
+        require(IERC20(lpPair.token1()).allowance(msg.sender,address(this)) >= wethAmount,"insufficient weth allowance");
+        IERC20(lpPair.token1()).transferFrom(msg.sender, _oracle.pairAddress(), wethAmount);
+      } else if(lpPair.token1() == address(_token)) {
+        // token0 == weth, token1 == cook
+        require(IERC20(lpPair.token0()).balanceOf(msg.sender) >= wethAmount,"insufficient weth balance");
+        require(IERC20(lpPair.token0()).allowance(msg.sender,address(this)) >= wethAmount,"insufficient weth allowance");
+        IERC20(lpPair.token0()).transferFrom(msg.sender, _oracle.pairAddress(), wethAmount);
+      }
+
+      return (wethAmount, lpPair.mint(address(this)));
+  }
+
+  function zap(uint256 cookAmount, address poolAddress) external {
+    address userAddress = msg.sender;
+
+    require(
+        _isRegistered[userAddress] == true,
+        "You have to be a registered address in order to release tokens."
+    );
+
+
+    require(cookAmount > 0,"zero zap amount");
+
+    require(getUserAvailableAmount(userAddress,today()) >= cookAmount,"insufficient avalible balance");
+
+    _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[userAddress].released.add(cookAmount);
+
+    (, uint256 newUniv2) = addLiquidity(cookAmount);
+
+    IERC20(_oracle.pairAddress()).approve(poolAddress,newUniv2);
+
+    IPool(poolAddress).zapStake(newUniv2,userAddress);
+  }
+
+
 }
