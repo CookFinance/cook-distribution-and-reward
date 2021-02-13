@@ -21,6 +21,11 @@ import "../oracle/IOracle.sol";
 
 contract MockSettableOracle is IOracle {
     uint256 internal _price;
+    address internal _pairAddress;
+
+    constructor(address pairAddress_) public {
+      _pairAddress = pairAddress_;
+    }
 
     function set(uint256 price) external {
         _price = price;
@@ -30,5 +35,7 @@ contract MockSettableOracle is IOracle {
         return _price;
     }
 
-    function pairAddress() override public view returns (address) { revert("Should not use"); }
+    function pairAddress() override public view returns (address) {
+      return _pairAddress;
+    }
 }

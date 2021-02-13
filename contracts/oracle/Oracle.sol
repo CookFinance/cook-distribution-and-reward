@@ -20,6 +20,7 @@ contract Oracle is IOracle, Ownable {
     address public override pairAddress;
     address public token0;
     address public token1;
+    address private _cookAddress;
 
     uint    public price0CumulativeLast;
     uint    public price1CumulativeLast;
@@ -30,9 +31,10 @@ contract Oracle is IOracle, Ownable {
     uint256 public latestPrice0;
     uint256 public latestPrice1;
 
-    constructor(address _pairAddress, address tokenA, address tokenB) public {
+    constructor(address _pairAddress, address cookAddress, address tokenB) public {
         pair = IUniswapV2Pair(_pairAddress);
         pairAddress = _pairAddress;
+        _cookAddress = cookAddress;
         token0 = IUniswapV2Pair(_pairAddress).token0();
         token1 = IUniswapV2Pair(_pairAddress).token1();
         price0CumulativeLast = IUniswapV2Pair(_pairAddress).price0CumulativeLast(); // fetch the current accumulated price value (1 / 0)
@@ -64,7 +66,11 @@ contract Oracle is IOracle, Ownable {
         latestPrice0 = price0Average.mul(10**18).decode144();
         latestPrice1 = price1Average.mul(10**18).decode144();
 
-        return latestPrice0;
+        if(pair.token0() == _cookAddress){
+          return latestPrice0;
+        } else {
+          return latestPrice1;
+        }
     }
 
     // note this will always return 0 before update has been called successfully for the first time.
