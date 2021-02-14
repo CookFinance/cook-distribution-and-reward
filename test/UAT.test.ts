@@ -5,24 +5,34 @@ import { solidity } from "ethereum-waffle";
 
 import { MockCOOK } from "../typechain/MockCOOK";
 import { MockPool } from "../typechain/MockPool";
-import { MockUniswapV2PairLiquidity } from "../typechain/MockUniswapV2PairLiquidity";
+import { TestnetWETH } from "../typechain/TestnetWETH";
 
 chai.use(solidity);
 
 const { expect } = chai;
 
+const UniswapV2FactoryBytecode = require('@uniswap/v2-core/build/UniswapV2Factory.json').bytecode;
+const UniswapV2FactoryABI = require('@uniswap/v2-core/build/UniswapV2Factory.json').abi;
+
+const UniswapV2Router02Bytecode = require('@uniswap/v2-periphery/build/UniswapV2Router02.json').bytecode;
+const UniswapV2Router02ABI = require('@uniswap/v2-periphery/build/UniswapV2Router02.json').abi;
+
 const getAddress = async(signer:Signer) => {
   return await signer.getAddress();
 }
 
-const INITIAL_STAKE_MULTIPLE = 1e6;
+async function latest (addtime:number = 0) {
+  const block = await ethers.provider.send("eth_getBlockByNumber",['latest',false]);
+  return ethers.BigNumber.from(block.timestamp).add(addtime);
+}
+
 const REWARD_PER_BLOCK = 1000;
 const STAKE_LOCKUP_DURATION = 30;
 
 describe("Pool", function () {
   let cookInstance : MockCOOK;
   let poolInstance : MockPool;
-  let univ2Insatnce : MockUniswapV2PairLiquidity;
+  let wethInstance : TestnetWETH;
 
   let owner : Signer;
   let userA : Signer;
@@ -46,26 +56,58 @@ describe("Pool", function () {
       "MockCOOK",
       owner
     );
-    cookInstance = (await cookFactory.deploy("1000000")) as MockCOOK;
-    await cookInstance.deployed();
+    cookInstance = (await cookFactory.deploy("1000000000000000000000000")) as MockCOOK;
+    this.cook = await cookInstance.deployed();
 
-    const univ2Factory = await ethers.getContractFactory(
-      "MockUniswapV2PairLiquidity",
+    const wethFactory = await ethers.getContractFactory(
+      "TestnetWETH",
+      owner
+    );
+    wethInstance = (await wethFactory.deploy()) as TestnetWETH;
+    this.weth = await wethInstance.deployed();
+
+    const uniswapFactory = await ethers.getContractFactory(
+      UniswapV2FactoryABI,
+      UniswapV2FactoryBytecode,
       owner
     );
 
-    univ2Insatnce = (await univ2Factory.deploy()) as MockUniswapV2PairLiquidity;
-    this.univ2 = await univ2Insatnce.deployed();
+    this.uni = await uniswapFactory.deploy(await owner.getAddress());
+    this.uniswap = await this.uni.deployed();
+
+    await this.uniswap.connect(owner).createPair(this.cook.address,this.weth.address);
+
+    this.pairAddress = await this.uniswap.connect(owner).getPair(this.cook.address,this.weth.address);
+
+    this.univ2 = await ethers.getContractAt("IUniswapV2Pair",this.pairAddress,owner);
+
+    this.cook.connect(owner).mint(await owner.getAddress(),'10000000000000000000000');
+    this.weth.connect(owner).mint(await owner.getAddress(),'10000000000000000000000');
+
+    const routerFactory = await ethers.getContractFactory(
+      UniswapV2Router02ABI,
+      UniswapV2Router02Bytecode,
+      owner
+    );
+
+    this.rou = await routerFactory.deploy(this.uniswap.address,this.weth.address);
+    this.router = await this.rou.deployed();
+
+    await this.cook.connect(owner).approve(this.router.address,'10000000000000000000000');
+    await this.weth.connect(owner).approve(this.router.address,'10000000000000000000000');
+
+    await this.router.connect(owner).addLiquidity(this.cook.address,this.weth.address,"10000000000000000000000","10000000000000000000000","100","100",await owner.getAddress(),await latest(1000000000));
+
 
     const poolFactory = await ethers.getContractFactory(
       "MockPool",
       owner
     );
 
-    poolInstance = (await poolFactory.deploy(cookInstance.address, univ2Insatnce.address)) as MockPool;
+    poolInstance = (await poolFactory.deploy(cookInstance.address, this.pairAddress, STAKE_LOCKUP_DURATION, REWARD_PER_BLOCK)) as MockPool;
     this.pool = await poolInstance.deployed();
-    await this.pool.setRewardPerBlock(REWARD_PER_BLOCK);
-    await this.pool.setStakeLockupDuration(STAKE_LOCKUP_DURATION);
+
+    this.cook.connect(owner).mint(await poolInstance.address,'1000000000000000000000000');
   });
 
   describe('UAT Test Cases [Pool]', function () {
@@ -88,7 +130,7 @@ describe("Pool", function () {
 
       it('staked and unstakable balances should be correct', async function() {
         console.log("A stakes 10");
-        await this.univ2.faucet(addrUserA, 10);
+        await this.univ2.connect(owner).transfer(addrUserA, 10);
         await this.univ2.connect(userA).approve(this.pool.address, 10);
         await this.pool.connect(userA).stake(10);
 
@@ -99,7 +141,7 @@ describe("Pool", function () {
         console.log("block moves from 0 to 1");
         await this.pool.setBlockNumber(1);
         console.log("A stakes 15");
-        await this.univ2.faucet(addrUserA, 15);
+        await this.univ2.connect(owner).transfer(addrUserA, 15);
         await this.univ2.connect(userA).approve(this.pool.address, 15);
         await this.pool.connect(userA).stake(15);
 
@@ -110,7 +152,7 @@ describe("Pool", function () {
         console.log("block moves from 1 to 2");
         await this.pool.setBlockNumber(2);
         console.log("B stakes 5");
-        await this.univ2.faucet(addrUserB, 5);
+        await this.univ2.connect(owner).transfer(addrUserB, 5);
         await this.univ2.connect(userB).approve(this.pool.address, 5);
         await this.pool.connect(userB).stake(5);
 
@@ -135,7 +177,7 @@ describe("Pool", function () {
       it('rewarded balance should be correct', async function() {
         console.log("A stakes 10");
         await this.pool.setBlockNumber(0);
-        await this.univ2.faucet(addrUserA, 10);
+        await this.univ2.connect(owner).transfer(addrUserA, 10);
         await this.univ2.connect(userA).approve(this.pool.address, 10);
         await this.pool.connect(userA).stake(10);
 
@@ -145,7 +187,7 @@ describe("Pool", function () {
         console.log("block moves from 0 to 2");
         await this.pool.setBlockNumber(2);
         console.log("A stakes 15");
-        await this.univ2.faucet(addrUserA, 15);
+        await this.univ2.connect(owner).transfer(addrUserA, 15);
         await this.univ2.connect(userA).approve(this.pool.address, 15);
         await this.pool.connect(userA).stake(15);
 
@@ -155,7 +197,7 @@ describe("Pool", function () {
         console.log("block moves from 2 to 5");
         await this.pool.setBlockNumber(5);
         console.log("B stakes 5");
-        await this.univ2.faucet(addrUserB, 5);
+        await this.univ2.connect(owner).transfer(addrUserB, 5);
         await this.univ2.connect(userB).approve(this.pool.address, 5);
         await this.pool.connect(userB).stake(5);
 
@@ -190,7 +232,7 @@ describe("Pool", function () {
 
       it('claimable and claimed balance should be correct', async function() {
         console.log("A stakes 10");
-        await this.univ2.faucet(addrUserA, 25);
+        await this.univ2.connect(owner).transfer(addrUserA, 25);
         await this.univ2.connect(userA).approve(this.pool.address, 25);
         await this.pool.connect(userA).stake(10);
 
