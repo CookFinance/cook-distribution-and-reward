@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import "../oracle/IOracle.sol";
+import "../oracle/IWETH.sol";
 import "../oracle/IPriceConsumerV3.sol";
 import "./IPool.sol";
 import "hardhat/console.sol";
@@ -36,7 +37,6 @@ contract CookDistribution is Ownable {
 
   // beneficiary that has been registered
   mapping(address => bool) private _isRegistered;
-
   // oracle price data (dayNumber => price)
   mapping(uint256 => uint256) private _oraclePriceFeed;
 
@@ -61,6 +61,9 @@ contract CookDistribution is Ownable {
   // next step to unlock
   uint32 private _nextPriceUnlockStep;
 
+  // Max step can be moved
+  uint32 private _maxPriceUnlockMoveStep;
+
   IERC20 private _token;
 
   IOracle private _oracle;
@@ -77,7 +80,13 @@ contract CookDistribution is Ownable {
   uint256[] private _percentageValue;
   mapping(uint256 => uint256) private _pricePercentageMapping;
 
+  // Fields for Admin
 
+  // blacklisted beneficiary
+  mapping(address => bool) private _isBlacklisted;
+
+  // stop everyone from claiming cook token due to emgergency
+  bool private _pauseClaim;
 
   constructor(
     IERC20 token_,
@@ -137,10 +146,10 @@ contract CookDistribution is Ownable {
     _priceConsumer = IPriceConsumerV3(priceConsumer_);
     _lastPriceUnlockDay = 0;
     _nextPriceUnlockStep = 0;
-
+    _maxPriceUnlockMoveStep = 1;
+    _pauseClaim = false;
 
     // init price percentage
-
     _priceKey = [500000,800000,1100000,1400000,1700000,2000000,2300000,2600000,2900000,3200000,3500000,3800000,4100000,4400000,4700000,5000000,5300000,5600000,5900000,6200000,6500000];
     _percentageValue = [1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100];
 
@@ -149,31 +158,9 @@ contract CookDistribution is Ownable {
     }
   }
 
-  /**
-    * add adddress with allocation
-    */
-  function addAddressWithAllocation(address beneficiaryAddress, uint256 amount) public onlyOwner {
-      _isRegistered[beneficiaryAddress] = true;
-      _beneficiaryAllocations[beneficiaryAddress] = Allocation(
-          amount,
-          0,
-          false
-      );
+  fallback() external payable {
+    revert();
   }
-
-  /**
-    * add adddress with allocation
-    */
-  function updatePricePercentage(uint256[] memory priceKey_, uint256[] memory percentageValue_) public onlyOwner {
-    _priceKey = priceKey_;
-    _percentageValue = percentageValue_;
-
-    for (uint256 i = 0; i < _priceKey.length; i++) {
-      _pricePercentageMapping[_priceKey[i]] = _percentageValue[i];
-    }
-
-  }
-
 
   /**
    * @return the start time of the token vesting. in unix
@@ -208,20 +195,6 @@ contract CookDistribution is Ownable {
       return _beneficiaryAllocations[userAddress].amount;
   }
 
-  /**
-   * return total vested cook amount
-   */
-  function getTotalAvailable() public onlyOwner view returns (uint256 amount) {
-    uint256 totalAvailable = 0;
-
-    for (uint256 i = 0; i < _allBeneficiary.length; ++i) {
-      totalAvailable += getUserAvailableAmount(_allBeneficiary[i], today());
-    }
-
-
-    return totalAvailable;
-  }
-
   function getUserAvailableAmount(address userAddress, uint256 onDayOrToday) public view returns (uint256 amountAvailable) {
       uint256 onDay = _effectiveDay(onDayOrToday);
       uint256 avalible = _getVestedAmount(userAddress,onDay).sub(_beneficiaryAllocations[userAddress].released);
@@ -233,6 +206,7 @@ contract CookDistribution is Ownable {
       return _getVestedAmount(userAddress,onDay);
 
   }
+
 
   /**
      * @dev returns the day number of the current day, in days since the UNIX epoch.
@@ -295,7 +269,6 @@ contract CookDistribution is Ownable {
     withdraw function
    */
   function withdraw(uint256 withdrawAmount) public {
-
     address userAddress = msg.sender;
 
     require(
@@ -303,14 +276,187 @@ contract CookDistribution is Ownable {
         "You have to be a registered address in order to release tokens."
     );
 
+    require(
+      _isBlacklisted[userAddress] == false,
+      "Your address is blacklisted"
+    );
 
-    require(getUserAvailableAmount(userAddress,today()) >= withdrawAmount,"insufficient avalible balance");
+    require(
+      _pauseClaim == false,
+      "Cook token is not claimable due to emgergency"
+    );
+
+    require(getUserAvailableAmount(userAddress,today()) >= withdrawAmount,"insufficient avalible cook balance");
 
     _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[userAddress].released.add(withdrawAmount);
 
     _token.transfer(userAddress, withdrawAmount);
 
     emit TokensWithdrawal(userAddress, withdrawAmount);
+  }
+
+  function _getPricePercentage(uint256 priceKey) internal view returns (uint256 percentageValue) {
+    return _pricePercentageMapping[priceKey];
+  }
+
+  function addLiquidity(uint256 cookAmount) internal returns (uint256, uint256) {
+      // get pair address
+      (uint256 wethAmount,) = _calWethAmountToPairCook(cookAmount);
+      _token.transfer(_oracle.pairAddress(), cookAmount);
+
+      IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
+      if(lpPair.token0() == address(_token)){
+        // token0 == cook, token1 == weth
+        require(IERC20(lpPair.token1()).balanceOf(msg.sender) >= wethAmount,"insufficient weth balance");
+        require(IERC20(lpPair.token1()).allowance(msg.sender,address(this)) >= wethAmount,"insufficient weth allowance");
+        IERC20(lpPair.token1()).transferFrom(msg.sender, _oracle.pairAddress(), wethAmount);
+      } else if(lpPair.token1() == address(_token)) {
+        // token0 == weth, token1 == cook
+        require(IERC20(lpPair.token0()).balanceOf(msg.sender) >= wethAmount,"insufficient weth balance");
+        require(IERC20(lpPair.token0()).allowance(msg.sender,address(this)) >= wethAmount,"insufficient weth allowance");
+        IERC20(lpPair.token0()).transferFrom(msg.sender, _oracle.pairAddress(), wethAmount);
+      }
+
+      return (wethAmount, lpPair.mint(address(this)));
+  }
+
+  function addLiquidityWithEth(uint256 cookAmount) internal returns (uint256, uint256) {
+      (uint256 wethAmount, address wethAddress) = _calWethAmountToPairCook(cookAmount);
+      // make sure the amount of eth == required weth amount
+      require (
+        msg.value == wethAmount,
+        "Please provide exact amount of eth needed to pair cook tokens"
+      );
+
+      // Swap ETH to WETH for user
+      IWETH(wethAddress).deposit{ value: msg.value }();
+      _token.transfer(_oracle.pairAddress(), cookAmount);
+
+      IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
+      if(lpPair.token0() == address(_token)){
+        // token0 == cook, token1 == weth
+        require(IERC20(lpPair.token1()).balanceOf(address(this)) >= wethAmount,"insufficient weth balance");
+        IERC20(lpPair.token1()).transferFrom(address(this), _oracle.pairAddress(), wethAmount);
+      } else if(lpPair.token1() == address(_token)) {
+        // token0 == weth, token1 == cook
+        require(IERC20(lpPair.token0()).balanceOf(address(this)) >= wethAmount,"insufficient weth balance");
+        IERC20(lpPair.token0()).transferFrom(address(this), _oracle.pairAddress(), wethAmount);
+      }
+
+      return (wethAmount, lpPair.mint(address(this)));
+  }
+
+function _calWethAmountToPairCook(uint256 cookAmount) internal returns (uint256, address) {
+    // get pair address
+    IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
+    uint reserve0;
+    uint reserve1;
+    address weth;
+
+    if (lpPair.token0() == address(_token)){
+      (reserve0, reserve1,) = lpPair.getReserves();
+      weth = lpPair.token1();
+    } else {
+      (reserve1, reserve0,) = lpPair.getReserves();
+      weth = lpPair.token0();
+    }
+
+    uint256 wethAmount = (reserve0 == 0 && reserve1 == 0) ?
+      cookAmount :
+      UniswapV2Library.quote(cookAmount, reserve0, reserve1);
+
+    return (wethAmount, weth);
+  }
+
+  function zapWithEth(uint256 cookAmount, address poolAddress) external payable {
+    _zap(cookAmount, poolAddress, true);
+  }
+
+  function zap(uint256 cookAmount, address poolAddress) external {
+    _zap(cookAmount, poolAddress, false);
+  }
+
+  function _zap(uint256 cookAmount, address poolAddress, bool isWithEth) internal {
+    address userAddress = msg.sender;
+
+    require(
+        _isRegistered[userAddress] == true,
+        "You have to be a registered address in order to release tokens."
+    );
+
+    require(
+        _isBlacklisted[userAddress] == false,
+        "Your address is blacklisted"
+    );
+
+    require(
+      _pauseClaim == false,
+      "Cook token cane not be zap due to emgergency"
+    );
+
+    require(cookAmount > 0,"zero zap amount");
+
+    require(getUserAvailableAmount(userAddress,today()) >= cookAmount,"insufficient avalible cook balance");
+
+    _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[userAddress].released.add(cookAmount);
+    uint256 newUniv2 = 0;
+
+    if (isWithEth) {
+      (, newUniv2) = addLiquidityWithEth(cookAmount);
+    } else {
+      (, newUniv2) = addLiquidity(cookAmount);
+    }
+
+    IERC20(_oracle.pairAddress()).approve(poolAddress,newUniv2);
+
+    IPool(poolAddress).zapStake(newUniv2,userAddress);
+  }
+
+  // Admin Functions
+  function setPriceBasedMaxStep(uint32 newMaxPriceBasedStep) public onlyOwner {
+    _maxPriceUnlockMoveStep = newMaxPriceBasedStep;
+  }
+
+  function getPriceBasedMaxSetp() public view onlyOwner returns(uint32) {
+    return _maxPriceUnlockMoveStep;
+  }
+
+  function getNextPriceUnlockStep() public view onlyOwner returns(uint32) {
+    return _nextPriceUnlockStep;
+  }
+
+  /**
+    * add adddress with allocation
+    */
+  function addAddressWithAllocation(address beneficiaryAddress, uint256 amount) public onlyOwner {
+      _isRegistered[beneficiaryAddress] = true;
+      _beneficiaryAllocations[beneficiaryAddress] = Allocation(
+          amount,
+          0,
+          false
+      );
+  }
+
+  function updatePricePercentage(uint256[] memory priceKey_, uint256[] memory percentageValue_) public onlyOwner {
+    _priceKey = priceKey_;
+    _percentageValue = percentageValue_;
+
+    for (uint256 i = 0; i < _priceKey.length; i++) {
+      _pricePercentageMapping[_priceKey[i]] = _percentageValue[i];
+    }
+  }
+
+  /**
+   * return total vested cook amount
+   */
+  function getTotalAvailable() public onlyOwner view returns (uint256 amount) {
+    uint256 totalAvailable = 0;
+
+    for (uint256 i = 0; i < _allBeneficiary.length; ++i) {
+      totalAvailable += getUserAvailableAmount(_allBeneficiary[i], today());
+    }
+
+    return totalAvailable;
   }
 
   function getLatestSevenSMA() public onlyOwner returns(uint256 priceValue) {
@@ -329,7 +475,6 @@ contract CookDistribution is Ownable {
       sevenSMA = priceSum.div(priceCount);
     }
     return sevenSMA;
-
   }
 
   /**
@@ -370,74 +515,38 @@ contract CookDistribution is Ownable {
         _advancePercentage = _pricePercentageMapping[_priceKey[_nextPriceUnlockStep]];
 
         // update nextStep value
-        _nextPriceUnlockStep = _nextPriceUnlockStep + 1;
+        _nextPriceUnlockStep = _nextPriceUnlockStep + _maxPriceUnlockMoveStep;
 
         // update lastUnlcokDay
         _lastPriceUnlockDay = today();
 
       }
     }
-
   }
 
-  function _getPricePercentage(uint256 priceKey) internal view returns (uint256 percentageValue) {
-    return _pricePercentageMapping[priceKey];
+  // Put an evil address into blacklist
+  function blacklistAddress(address addr) public onlyOwner {
+    _isBlacklisted[addr] = true;
   }
 
-  function addLiquidity(uint256 cookAmount) internal returns (uint256, uint256) {
-      // get pair address
-      IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
-      uint reserve0;
-      uint reserve1;
-      if(lpPair.token0() == address(_token)){
-        (reserve0, reserve1,) = lpPair.getReserves();
-      } else {
-        (reserve1, reserve0,) = lpPair.getReserves();
-      }
-
-      uint256 wethAmount = (reserve0 == 0 && reserve1 == 0) ?
-           cookAmount :
-           UniswapV2Library.quote(cookAmount, reserve0, reserve1);
-
-
-      _token.transfer(_oracle.pairAddress(), cookAmount);
-
-      if(lpPair.token0() == address(_token)){
-        // token0 == cook, token1 == weth
-        require(IERC20(lpPair.token1()).balanceOf(msg.sender) >= wethAmount,"insufficient weth balance");
-        require(IERC20(lpPair.token1()).allowance(msg.sender,address(this)) >= wethAmount,"insufficient weth allowance");
-        IERC20(lpPair.token1()).transferFrom(msg.sender, _oracle.pairAddress(), wethAmount);
-      } else if(lpPair.token1() == address(_token)) {
-        // token0 == weth, token1 == cook
-        require(IERC20(lpPair.token0()).balanceOf(msg.sender) >= wethAmount,"insufficient weth balance");
-        require(IERC20(lpPair.token0()).allowance(msg.sender,address(this)) >= wethAmount,"insufficient weth allowance");
-        IERC20(lpPair.token0()).transferFrom(msg.sender, _oracle.pairAddress(), wethAmount);
-      }
-
-      return (wethAmount, lpPair.mint(address(this)));
+  //Remove an address from blacklist
+  function removeAddressFromBlacklist(address addr) public onlyOwner {
+    _isBlacklisted[addr] = false;
   }
 
-  function zap(uint256 cookAmount, address poolAddress) external {
-    address userAddress = msg.sender;
-
-    require(
-        _isRegistered[userAddress] == true,
-        "You have to be a registered address in order to release tokens."
-    );
-
-
-    require(cookAmount > 0,"zero zap amount");
-
-    require(getUserAvailableAmount(userAddress,today()) >= cookAmount,"insufficient avalible balance");
-
-    _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[userAddress].released.add(cookAmount);
-
-    (, uint256 newUniv2) = addLiquidity(cookAmount);
-
-    IERC20(_oracle.pairAddress()).approve(poolAddress,newUniv2);
-
-    IPool(poolAddress).zapStake(newUniv2,userAddress);
+  // Pause all claim due to emergency
+  function pauseClaim() public onlyOwner {
+    _pauseClaim = true;
   }
 
+  // resume cliamable
+  function resumeCliam() public onlyOwner {
+    _pauseClaim = false;
+  }
+
+  // admin emergency to transfer token to owner
+  function emergencyWithdraw(uint256 amount) public onlyOwner {
+    _token.transfer(msg.sender, amount);
+  }
 
 }

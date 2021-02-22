@@ -27,10 +27,6 @@ contract MockCookDistribution is CookDistribution {
       return _today;
   }
 
-  function getVestedAmountE(address userAddress, uint256 onDayOrToday) external view returns (uint256 amountVested)  {
-        return super._getVestedAmount(userAddress,onDayOrToday);
-  }
-
   function getPricePercentageMappingE(uint256 priceKey) external view returns (uint256 value)  {
         return super._getPricePercentage(priceKey);
   }

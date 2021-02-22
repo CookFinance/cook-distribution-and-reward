@@ -4,16 +4,16 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./PoolState.sol";
 import "./Constants.sol";
 import "hardhat/console.sol";
-import "../mock/MockCOOK.sol";
 
 contract PoolGetters is PoolState {
     using SafeMath for uint256;
+
     uint32 private constant SECONDS_PER_DAY = 86400; /* 86400 seconds in a day */
 
     /**
      * Global
      */
-    function dollar() virtual public view returns (MockCOOK) {
+    function dollar() virtual public view returns (IERC20) {
         return _state.provider.dollar;
     }
 

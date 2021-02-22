@@ -8,6 +8,7 @@ import "./Constants.sol";
 import "./PoolSetters.sol";
 import "./IPool.sol";
 import "hardhat/console.sol";
+import "../oracle/IWETH.sol";
 
 contract Pool is PoolSetters, IPool {
     using SafeMath for uint256;
@@ -23,6 +24,9 @@ contract Pool is PoolSetters, IPool {
     event Harvest(address indexed account, uint256 cookAmount);
     event Zap(address indexed account, uint256 cookAmount, uint256 lessWeth, uint256 newUniv2);
 
+    fallback() external payable {
+      revert();
+    }
 
     function stake(uint256 univ2Amount) override external {
 
@@ -145,13 +149,13 @@ contract Pool is PoolSetters, IPool {
         emit Claim(msg.sender, cookAmount);
     }
 
-    function addLiquidity(uint256 cookAmount) internal returns (uint256, uint256) {
+    function _calWethAmountToPairCook(uint256 cookAmount) internal returns (uint256, address) {
         IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
 
         uint reserve0;
         uint reserve1;
         address weth;
-        if(lpPair.token0() == address(dollar())) {
+        if (lpPair.token0() == address(dollar())) {
             (reserve0, reserve1,) = lpPair.getReserves();
             weth = lpPair.token1();
         } else {
@@ -160,31 +164,72 @@ contract Pool is PoolSetters, IPool {
         }
 
         uint256 wethAmount = (reserve0 == 0 && reserve1 == 0) ?
-            cookAmount :
-            UniswapV2Library.quote(cookAmount, reserve0, reserve1);
+                cookAmount :
+                UniswapV2Library.quote(cookAmount, reserve0, reserve1);
+
+        return (wethAmount, weth);
+    }
+
+    function addLiquidity(uint256 cookAmount) internal returns (uint256, uint256) {
+        (uint256 wethAmount, address wethAddress) = _calWethAmountToPairCook(cookAmount);
+        IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
 
         dollar().transfer(address(univ2()), cookAmount);
-        IERC20(weth).transferFrom(msg.sender, address(univ2()), wethAmount);
+        IERC20(wethAddress).transferFrom(msg.sender, address(univ2()), wethAmount);
+        return (wethAmount, lpPair.mint(address(this)));
+    }
+
+    function addLiquidityWithEth(uint256 cookAmount) internal returns(uint256, uint256) {
+        (uint256 wethAmount, address wethAddress) = _calWethAmountToPairCook(cookAmount);
+
+        require (
+          msg.value == wethAmount,
+          "Please provide exact amount of eth needed to pair cook tokens"
+        );
+        IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
+
+        // Swap ETH to WETH for user
+        IWETH(wethAddress).deposit{ value: msg.value }();
+        dollar().transfer(address(univ2()), cookAmount);
+
+        IERC20(wethAddress).transferFrom(address(this), address(univ2()), wethAmount);
 
         return (wethAmount, lpPair.mint(address(this)));
     }
 
+    function _zap(uint256 cookAmount, bool isWithEth) internal {
+      require(
+          cookAmount > 0,
+          "zero zap amount"
+      );
+
+      require(
+          balanceOfClaimable(msg.sender) >= cookAmount,
+          "insufficient claimable balancex"
+      );
+
+      uint256 lessWeth = 0;
+      uint256 newUniv2 = 0;
+
+      if (isWithEth) {
+          (lessWeth, newUniv2) = addLiquidityWithEth(cookAmount);
+      } else {
+          (lessWeth, newUniv2) = addLiquidity(cookAmount);
+      }
+
+      incrementBalanceOfClaimed(msg.sender, cookAmount);
+      updateStakeStates(newUniv2, msg.sender);
+      uniBalanceCheck();
+
+      emit Zap(msg.sender, cookAmount, lessWeth, newUniv2);
+    }
+
     function zap(uint256 cookAmount) external {
-        require(
-            cookAmount > 0,
-            "zero zap amount"
-        );
+      _zap(cookAmount, false);
+    }
 
-        require(
-            balanceOfClaimable(msg.sender) >= cookAmount,
-            "insufficient claimable balancex"
-        );
-        (uint256 lessWeth, uint256 newUniv2) = addLiquidity(cookAmount);
-        incrementBalanceOfClaimed(msg.sender, cookAmount);
-        updateStakeStates(newUniv2, msg.sender);
-        uniBalanceCheck();
-
-        emit Zap(msg.sender, cookAmount, lessWeth, newUniv2);
+    function zapWithEth(uint256 cookAmount) external payable {
+      _zap(cookAmount, true);
     }
 
     function uniBalanceCheck() private view {

@@ -2,8 +2,6 @@ pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "../mock/MockCOOK.sol";
-
 contract Account {
     struct State {
         uint256 staked; //LP
@@ -21,7 +19,7 @@ struct Vesting {
 
 contract Storage {
     struct Provider {
-        MockCOOK dollar;
+        IERC20 dollar;
         IERC20 univ2;
 
     }
