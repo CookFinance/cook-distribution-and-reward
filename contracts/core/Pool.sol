@@ -13,9 +13,14 @@ import "../oracle/IWETH.sol";
 contract Pool is PoolSetters, IPool {
     using SafeMath for uint256;
 
-    constructor(address dollar, address univ2) public {
+    constructor(address dollar, address univ2, uint256 cook_reward_per_block, uint256 totalPoolCapLimit, uint256 stakeLimitPerAddress) public {
         _state.provider.dollar = IERC20(dollar); //COOK
         _state.provider.univ2 = IERC20(univ2); //univ2 pair COOK/WETH
+        _state.pauseMinig = false;
+        // 2e18 is 2 cook token perblock
+        _state.REWARD_PER_BLOCK = cook_reward_per_block;
+        _state.totalPoolCapLimit = totalPoolCapLimit;
+        _state.stakeLimitPerAddress = stakeLimitPerAddress;
     }
 
     event Stake(address indexed account, uint256 univ2Amount);
@@ -29,6 +34,11 @@ contract Pool is PoolSetters, IPool {
     }
 
     function stake(uint256 univ2Amount) override external {
+        checkMiningPaused();
+        ensureAddrNotBlacklisted(msg.sender);
+
+        checkPoolStakeCapLimit(univ2Amount);
+        checkPerAddrStakeLimit(univ2Amount, msg.sender);
 
         updateStakeStates(univ2Amount, msg.sender);
         univ2().transferFrom(msg.sender, address(this), univ2Amount);
@@ -55,6 +65,11 @@ contract Pool is PoolSetters, IPool {
     }
 
     function zapStake(uint256 univ2Amount, address userAddress) override external {
+        checkMiningPaused();
+        ensureAddrNotBlacklisted(userAddress);
+
+        checkPoolStakeCapLimit(univ2Amount);
+        checkPerAddrStakeLimit(univ2Amount, userAddress);
 
         updateStakeStates(univ2Amount, userAddress);
         univ2().transferFrom(msg.sender, address(this), univ2Amount);
@@ -108,6 +123,8 @@ contract Pool is PoolSetters, IPool {
     }
 
     function harvest(uint256 cookAmount) external override {
+        ensureAddrNotBlacklisted(msg.sender);
+
         require(
             cookAmount > 0,
             "zero harvest amount"
@@ -133,6 +150,8 @@ contract Pool is PoolSetters, IPool {
     }
 
     function claim(uint256 cookAmount) external override {
+        ensureAddrNotBlacklisted(msg.sender);
+
         require(
             cookAmount > 0,
             "zero claim amount"
@@ -208,6 +227,9 @@ contract Pool is PoolSetters, IPool {
           "insufficient claimable balancex"
       );
 
+      checkMiningPaused();
+      ensureAddrNotBlacklisted(msg.sender);
+
       uint256 lessWeth = 0;
       uint256 newUniv2 = 0;
 
@@ -216,6 +238,9 @@ contract Pool is PoolSetters, IPool {
       } else {
           (lessWeth, newUniv2) = addLiquidity(cookAmount);
       }
+
+      checkPoolStakeCapLimit(newUniv2);
+      checkPerAddrStakeLimit(newUniv2, msg.sender);
 
       incrementBalanceOfClaimed(msg.sender, cookAmount);
       updateStakeStates(newUniv2, msg.sender);
@@ -244,5 +269,10 @@ contract Pool is PoolSetters, IPool {
             dollar().balanceOf(address(this)) >= totalVesting() + totalRewarded() - totalClaimed(),
             "Inconsistent COOK balances"
         );
+    }
+
+    // admin emergency to transfer token to owner
+    function emergencyWithdraw(uint256 amount) public onlyOwner {
+      dollar().transfer(msg.sender, amount);
     }
 }

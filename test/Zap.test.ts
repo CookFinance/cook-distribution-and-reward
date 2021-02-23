@@ -119,8 +119,6 @@ describe("Zap", ()=>{
   this.rou = await routerFactory.deploy(this.uniswap.address,this.weth.address);
   this.router = await this.rou.deployed();
 
-
-
   await this.cook.connect(owner).approve(this.router.address,'10000000000000000000000');
   await this.weth.connect(owner).approve(this.router.address,'10000000000000000000000');
 
@@ -141,7 +139,7 @@ describe("Zap", ()=>{
     owner
   );
 
-  poolInstance = (await poolFactory.deploy(this.cook.address, this.pairAddress)) as Pool;
+  poolInstance = (await poolFactory.deploy(this.cook.address, this.pairAddress, 1, 0, 0)) as Pool;
   this.pool = await poolInstance.deployed();
 
   this.cook.connect(owner).mint(this.pool.address,'1000000000000000000000000');
@@ -164,15 +162,19 @@ describe("Zap", ()=>{
     beforeEach(async function () {
       // mint weth to address1
       await this.weth.mint(await addr1.getAddress(),"10000000000000000");
-
       await this.weth.connect(addr1).approve(this.cookDistribution.address,'10000000000000000');
-
-
     })
 
-
     it('before zap', async function () {
-      expect(await this.pair.token1()).to.be.equal(this.weth.address);
+
+      if(this.pair.token1() == this.weth.address){
+        expect(await this.pair.token1()).to.be.equal(this.weth.address);
+        expect(await this.pair.token0()).to.be.equal(this.cook.address);
+      } else if (this.pair.token0() == this.weth.address){
+        expect(await this.pair.token0()).to.be.equal(this.weth.address);
+        expect(await this.pair.token1()).to.be.equal(this.cook.address);
+      }
+
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(0);
       expect(await this.pool.balanceOfStaked(await addr1.getAddress())).to.be.equal(0);
       expect(await this.weth.balanceOf(await addr1.getAddress())).to.be.equal('10000000000000000');
@@ -183,12 +185,10 @@ describe("Zap", ()=>{
     });
 
     it('zap over claimable balance', async function () {
-      await expect(this.cookDistribution.connect(addr1).zap(1,this.pool.address)).to.be.revertedWith("insufficient avalible balance");
+      await expect(this.cookDistribution.connect(addr1).zap(1,this.pool.address)).to.be.revertedWith("insufficient avalible cook balance");
     });
 
     it('zap 100 cook', async function () {
-
-
       await this.cookDistribution.setToday(TODAY_DAYS+31);
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal('100000000000000000000');
       expect(await this.weth.balanceOf(await addr1.getAddress())).to.be.equal('10000000000000000');
@@ -200,7 +200,6 @@ describe("Zap", ()=>{
     });
 
     it('insufficient weth', async function () {
-
       await this.cookDistribution.setToday(TODAY_DAYS+61);
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal('200000000000000000000');
       expect(await this.weth.balanceOf(await addr1.getAddress())).to.be.equal('10000000000000000');
@@ -209,7 +208,6 @@ describe("Zap", ()=>{
     });
 
     it('insufficient weth allowance', async function () {
-
       await this.cookDistribution.setToday(TODAY_DAYS+61);
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal('200000000000000000000');
       await this.weth.mint(await addr1.getAddress(),"10000000000000000");
@@ -218,8 +216,49 @@ describe("Zap", ()=>{
 
     });
 
-    it('multilple zap', async function () {
+    it('blacklist or pause claim', async function () {
+      await this.cookDistribution.setToday(TODAY_DAYS+61);
+      expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal('200000000000000000000');
+      await this.weth.mint(await addr1.getAddress(),"10000000000000000");
+      expect(await this.weth.balanceOf(await addr1.getAddress())).to.be.equal('20000000000000000');
 
+      await cookInstance.connect(owner).pauseClaim();
+      await expect(cookInstance.connect(addr1).zap('100000000000000000000',this.pool.address)).to.be.revertedWith("Cook token cane not be zap due to emgergency");
+
+      await cookInstance.connect(owner).resumeCliam();
+      await this.cookDistribution.connect(addr1).zap('100000000000000000000',this.pool.address);
+
+      await cookInstance.connect(owner).blacklistAddress(await addr1.getAddress());
+      await expect(cookInstance.connect(addr1).zap('100000000000000000000',this.pool.address)).to.be.revertedWith("Your address is blacklisted");
+
+      await cookInstance.connect(owner).removeAddressFromBlacklist(await addr1.getAddress());
+      await this.weth.connect(addr1).approve(this.cookDistribution.address,'10000000000000000');
+      await this.cookDistribution.connect(addr1).zap('100000000000000000000',this.pool.address);
+
+      expect(await this.weth.balanceOf(await addr1.getAddress())).to.be.equal(0);
+    })
+
+    it('Cap limit', async function () {
+      await this.cookDistribution.setToday(TODAY_DAYS+61);
+      expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal('200000000000000000000');
+      await this.weth.mint(await addr1.getAddress(),"10000000000000000");
+      expect(await this.weth.balanceOf(await addr1.getAddress())).to.be.equal('20000000000000000');
+
+      await this.pool.connect(owner).setTotalPoolCapLimit(1);
+      await expect(cookInstance.connect(addr1).zap('100000000000000000000',this.pool.address)).to.be.revertedWith('The amount to be staked will exceed pool limit');
+
+      await this.pool.connect(owner).setTotalPoolCapLimit('300000000000000000000');
+      await this.pool.connect(owner).setStakeLimitPerAddress(1);
+      await expect(cookInstance.connect(addr1).zap('100000000000000000000',this.pool.address)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
+
+      await poolInstance.connect(owner).setStakeLimitPerAddress('300000000000000000000');
+      await this.weth.connect(addr1).approve(this.cookDistribution.address,'20000000000000000');
+
+      await this.cookDistribution.connect(addr1).zap('200000000000000000000',this.pool.address);
+      expect(await this.weth.balanceOf(await addr1.getAddress())).to.be.equal(0);
+    })
+
+    it('multilple zap', async function () {
       await this.cookDistribution.setToday(TODAY_DAYS+91);
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal('300000000000000000000');
       expect(await this.weth.balanceOf(await addr1.getAddress())).to.be.equal('10000000000000000');
@@ -236,7 +275,17 @@ describe("Zap", ()=>{
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal('100000000000000000000');
       expect(await this.pool.balanceOfStaked(await addr1.getAddress())).to.be.equal('2000000000000000000');
       expect(await this.weth.balanceOf(await addr1.getAddress())).to.be.equal(0);
+
+      let overrides = {value: ethers.utils.parseEther("0.01"), gasLimit: 600000}
+      let txn = await this.cookDistribution.connect(addr1).zapWithEth('100000000000000000000',this.pool.address, overrides);
+
+      expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal('0');
+      expect(await this.pool.balanceOfStaked(await addr1.getAddress())).to.be.equal('3000000000000000000');
+      expect(await this.weth.balanceOf(await this.cookDistribution.address)).to.be.equal(0);
     });
   });
+
+  // await expect(cookInstance.connect(addr1).withdraw(70)).to.be.revertedWith("Cook token cane not be zap due to emgergency");
+
 
 })

@@ -1,6 +1,7 @@
 pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Account {
     struct State {
@@ -38,9 +39,33 @@ contract Storage {
         uint256 lastRewardBlock;
 
         mapping(address => Account.State) accounts;
+
+        // Fields for Admin
+
+        // stop everyone from
+        // 1. stop accepting more LP token into pool,
+        // 2. stop take any zapping
+        // 3. stop claim/harvest/zap rewarded cook
+        // 4. stop distributing cook reward
+        bool pauseMinig;
+
+        // blacklisted beneficiary,
+        // 1. the address won't be able to claim/harvest/zap rewarded cook,
+        // 2. blacklisted address can withdraw their LP token immmediately
+        // 3. blacklisted address won't receive anymore rewarded cook
+        mapping(address => bool) isBlacklisted;
+
+        // Mining cook reward per block
+        uint256 REWARD_PER_BLOCK;
+
+        // pool cap limit, 0 will be unlimited
+        uint256 totalPoolCapLimit;
+
+        // stake limit per address, 0 will be unlimited
+        uint256 stakeLimitPerAddress;
     }
 }
 
-contract PoolState {
+contract PoolState is Ownable {
     Storage.State _state;
 }

@@ -57,7 +57,7 @@ contract PoolSetters is PoolState, PoolGetters {
         _state.accounts[account].phantom = _state.accounts[account].phantom.add(amount);
         _state.balance.phantom = _state.balance.phantom.add(amount);
     }
-    
+
     function decrementBalanceOfPhantom(address account, uint256 amount, string memory reason) internal {
         _state.accounts[account].phantom = _state.accounts[account].phantom.sub(amount, reason);
         _state.balance.phantom = _state.balance.phantom.sub(amount, reason);
@@ -75,4 +75,41 @@ contract PoolSetters is PoolState, PoolGetters {
         _state.accounts[account].vestings.push(vesting);
         _state.balance.vesting = _state.balance.vesting.add(amount);
     }
+
+    // Admin Functions
+    // Put an evil address into blacklist
+    function blacklistAddress(address addr) public onlyOwner {
+      _state.isBlacklisted[addr] = true;
+    }
+
+    //Remove an address from blacklist
+    function removeAddressFromBlacklist(address addr) public onlyOwner {
+      _state.isBlacklisted[addr] = false;
+    }
+
+    // Pause all liquidity mining program
+    function pauseMinigReward() public onlyOwner {
+      _state.pauseMinig = true;
+      _state.REWARD_PER_BLOCK = 0;
+    }
+
+    // resume liquidity mining program
+    function resumeMiningReward(uint256 rewardPerBlock) public onlyOwner {
+      _state.pauseMinig = false;
+      _state.REWARD_PER_BLOCK = rewardPerBlock;
+    }
+
+    // set cook token reward per block
+    function setRewardPerBlock(uint256 rewardPerBlock) public onlyOwner {
+      _state.REWARD_PER_BLOCK = rewardPerBlock;
+    }
+
+    function setTotalPoolCapLimit(uint256 totalPoolCapLimit) public onlyOwner {
+      _state.totalPoolCapLimit = totalPoolCapLimit;
+    }
+
+    function setStakeLimitPerAddress(uint256 stakeLimitPerAddress) public onlyOwner {
+      _state.stakeLimitPerAddress = stakeLimitPerAddress;
+    }
+
 }

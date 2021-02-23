@@ -83,9 +83,10 @@ contract CookDistribution is Ownable {
   // Fields for Admin
 
   // blacklisted beneficiary
+  // if an address is blacklisted, the address can't claim/zap cook token
   mapping(address => bool) private _isBlacklisted;
 
-  // stop everyone from claiming cook token due to emgergency
+  // stop everyone from claiming/zapping cook token due to emgergency
   bool private _pauseClaim;
 
   constructor(

@@ -45,13 +45,13 @@ contract PoolGetters is PoolState {
         return _state.lastRewardBlock;
     }
 
+    function getRewardPerBlock() virtual public view returns (uint256) {
+        return _state.REWARD_PER_BLOCK;
+    }
+
     // Overridable for testing
     function getStakeLockupDuration() virtual public view returns (uint256) {
         return Constants.getStakeLockupDuration();
-    }
-
-    function getRewardPerBlock() virtual public view returns (uint256) {
-        return Constants.getRewardPerBlock();
     }
 
     function blockNumber() virtual internal view returns (uint256) {
@@ -97,7 +97,8 @@ contract PoolGetters is PoolState {
             uint32 startDay = uint32(start / SECONDS_PER_DAY);
             uint32 today = uint32(blockTimestamp() / SECONDS_PER_DAY);
 
-            if (today >= (startDay + getStakeLockupDuration())) {
+            // IF an address is blacklisted, the account can't claim/harvest/zap cook rewrad, hence the address can unstake completely
+            if ((today >= (startDay + getStakeLockupDuration())) || isAddrBlacklisted(account)) {
                 unstakable += totalStakingAmount; // If after end of staking lockup, then the unstakable amount is total amount.
             } else {
                 unstakable += uint256(0); // If it's before the staking lockup then the unstakable amount is zero.
@@ -167,4 +168,51 @@ contract PoolGetters is PoolState {
         }
         return claimable - balanceOfClaimed(account);
     }
+
+    function isMiningPaused() internal view returns (bool) {
+      return _state.pauseMinig;
+    }
+
+    function isAddrBlacklisted(address addr) internal view returns (bool) {
+      return _state.isBlacklisted[addr];
+    }
+
+    function totalPoolCapLimit() public view returns (uint256) {
+      return _state.totalPoolCapLimit;
+    }
+
+    function stakeLimitPerAddress() public view returns (uint256) {
+      return _state.stakeLimitPerAddress;
+    }
+
+    function checkMiningPaused() public {
+      require(
+        isMiningPaused() == false,
+        "liquidity mining program is paused due to some emergency, please stay tuned"
+      );
+    }
+
+    function ensureAddrNotBlacklisted(address addr) public {
+      require(
+        isAddrBlacklisted(addr) == false,
+        "Your address is blacklisted, you can not claim/harvet/zap cook reward, but you can withdraw you LP tokens"
+      );
+    }
+
+    function checkPoolStakeCapLimit(uint256 amountToStake) public {
+      require(
+        (_state.totalPoolCapLimit == 0 || // no limit
+        (_state.balance.staked + amountToStake) <= _state.totalPoolCapLimit) == true,
+        "The amount to be staked will exceed pool limit"
+      );
+    }
+
+    function checkPerAddrStakeLimit(uint256 amountToStake, address account) public {
+      require(
+        (_state.stakeLimitPerAddress == 0 || // no limit
+        (balanceOfStaked(account) + amountToStake) <= _state.stakeLimitPerAddress) == true,
+        "The amount to be staked will exceed per address stake limit"
+      );
+    }
+
 }

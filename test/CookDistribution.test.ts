@@ -16,7 +16,7 @@ const getAddress = async(signer:Signer) => {
   return await signer.getAddress();
 }
 
-const SECONDS_PER_DAY = 30;
+const SECONDS_PER_DAY = 86400;
 const TODAY_SECONDS = new Date().getTime();
 
 
@@ -58,7 +58,9 @@ describe("CookDistribution", ()=>{
      "MockSettableOracle",
      owner
    );
-   oracle = (await oracleFactory.deploy()) as MockSettableOracle;
+
+   // oracle constructor should use pair address, but for MockSettableOracle we can use any address
+   oracle = (await oracleFactory.deploy(token.address)) as MockSettableOracle;
    await oracle.deployed();
 
    const priceConsumerFactory = await ethers.getContractFactory(
@@ -89,22 +91,18 @@ describe("CookDistribution", ()=>{
 
       // transfer from owner to contract
       await token.transfer(cookInstance.address,'1000000');
-
     })
 
 
     it("deployer should have 0 balance after transfer", async ()=> {
-
       expect(await token.balanceOf(await owner.getAddress())).to.equal(0);
     });
 
     it("distributor should have total balance after transfer", async ()=> {
-
       expect(await token.balanceOf(cookInstance.address)).to.equal(1000000);
     });
 
     it("distributor initilized successfully", async ()=> {
-
       expect(await cookInstance.getUserVestingAmount(await addr1.getAddress())).to.equal(1200);
       expect(await cookInstance.startDay()).to.equal(TODAY_DAYS);
       expect(await cookInstance.duration()).to.equal(360);
@@ -136,37 +134,38 @@ describe("CookDistribution", ()=>{
     })
 
     it("has zero vested", async() => {
-      expect(await cookInstance.getVestedAmountE(await addr1.getAddress(),TODAY_DAYS)).to.equal(0);
+      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),TODAY_DAYS)).to.equal(0);
     })
 
     it("has zero vested after 20 days", async() => {
-
       await cookInstance.setToday(TODAY_DAYS+20);
-      expect(await cookInstance.getVestedAmountE(await addr1.getAddress(),0)).to.equal(0);
+      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),0)).to.equal(0);
     })
 
     it("has zero vested after 29 days", async() => {
-
       await cookInstance.setToday(TODAY_DAYS+29);
-      expect(await cookInstance.getVestedAmountE(await addr1.getAddress(),0)).to.equal(0);
+      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),0)).to.equal(0);
     })
 
     it("has 100 vested after 30 days", async() => {
-
       await cookInstance.setToday(TODAY_DAYS+31);
-      expect(await cookInstance.getVestedAmountE(await addr1.getAddress(),0)).to.equal(100);
+      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),0)).to.equal(100);
     })
 
     it("has 200 vested after 61 days", async() => {
-
       await cookInstance.setToday(TODAY_DAYS+61);
-      expect(await cookInstance.getVestedAmountE(await addr1.getAddress(),0)).to.equal(200);
+      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),0)).to.equal(200);
     })
 
     it("has total vested after 1000 days", async() => {
-
       await cookInstance.setToday(TODAY_DAYS+1000);
-      expect(await cookInstance.getVestedAmountE(await addr1.getAddress(),0)).to.equal(1200);
+      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),0)).to.equal(1200);
+    })
+
+    it("Admin emgergency withdraw all Cook", async() => {
+      await expect(cookInstance.connect(addr1).emergencyWithdraw(1000000)).to.be.reverted;
+      await expect(cookInstance.connect(owner).emergencyWithdraw(1000000))
+      expect(await token.balanceOf(cookInstance.address)).to.equal(0)
     })
   })
 
@@ -186,22 +185,17 @@ describe("CookDistribution", ()=>{
 
       await cookInstance.setToday(TODAY_DAYS+31);
       await cookInstance.connect(addr1).withdraw(30);
-
     });
 
-
     it("has 30 vested after after withdraw", async() => {
-
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(70);
       expect(await token.balanceOf(await addr1.getAddress())).to.equal(30);
-
     })
 
     it("will fail for insufficient balance", async() => {
-
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(70);
       expect(await cookInstance.connect(owner).getTotalAvailable()).to.equal(70);
-      await expect(cookInstance.connect(addr1).withdraw(80)).to.be.revertedWith("insufficient avalible balance");
+      await expect(cookInstance.connect(addr1).withdraw(80)).to.be.revertedWith("insufficient avalible cook balance");
 
     })
 
@@ -210,16 +204,26 @@ describe("CookDistribution", ()=>{
     })
 
     it("has right availableBalance after withdraw + new vested", async() => {
-
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(70);
-
       await cookInstance.setToday(TODAY_DAYS+61);
-
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(170);
-
     })
 
+    it("Admin pause and resume claim", async() => {
+      await cookInstance.connect(owner).pauseClaim();
+      await expect(cookInstance.connect(addr1).withdraw(30)).to.be.revertedWith("Cook token is not claimable due to emgergency");
 
+      await cookInstance.connect(owner).resumeCliam();
+      await expect(cookInstance.connect(addr1).withdraw(30))
+      expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(40);
+
+      await cookInstance.connect(owner).blacklistAddress(await addr1.getAddress());
+      await expect(cookInstance.connect(addr1).withdraw(40)).to.be.revertedWith("Your address is blacklisted");
+
+      await cookInstance.connect(owner).removeAddressFromBlacklist(await addr1.getAddress());
+      await expect(cookInstance.connect(addr1).withdraw(40))
+      expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(0);
+    })
   })
 
   describe("Add Allocation", ()=>{
@@ -235,7 +239,6 @@ describe("CookDistribution", ()=>{
 
       // transfer from owner to contract
       await token.transfer(cookInstance.address,'1000000');
-
     });
 
     it("address 2 is not registered", async () => {
@@ -245,8 +248,6 @@ describe("CookDistribution", ()=>{
     it("others can not add allocation", async () => {
       await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr3.getAddress(),"1500")).to.be.revertedWith("Ownable: caller is not the owner");
     })
-
-
 
     it("address 2 should be registered with right amount", async () => {
       // add allocation for address2
@@ -274,16 +275,11 @@ describe("CookDistribution", ()=>{
       expect(await cookInstance.getUserAvailableAmount(await addr3.getAddress(),0)).to.equal(0);
 
       expect(await cookInstance.connect(owner).getTotalAvailable()).to.equal(500);
-
-
     })
-
-
   })
 
   describe("Price based unlock", ()=>{
     beforeEach(async ()=> {
-
       const cookDistributionFactory = await ethers.getContractFactory(
         "MockCookDistribution",
         owner
@@ -298,7 +294,7 @@ describe("CookDistribution", ()=>{
     });
 
     it("has zero vested before price update", async() => {
-      expect(await cookInstance.getVestedAmountE(await addr1.getAddress(),0)).to.equal(0);
+      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),0)).to.equal(0);
     })
 
     it("only owner can update price feed", async() => {
@@ -309,6 +305,11 @@ describe("CookDistribution", ()=>{
     it("after update price", async() => {
       // _priceKey = [500000,800000,1100000,1400000,1700000,2000000,2300000,2600000,2900000,3200000,3500000,3800000,4100000,4400000,4700000,5000000,5300000,5600000,5900000,6200000,6500000];
       // _percentageValue = [1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100];
+
+      //admin function
+      expect(await cookInstance.connect(owner).getPriceBasedMaxSetp()).to.equal(1);
+      await expect(cookInstance.connect(addr1).getPriceBasedMaxSetp()).to.be.reverted;
+
       await oracle.connect(owner).set("1000000000000000000");
       await priceConsumer.connect(owner).set("510000");
       await cookInstance.setToday(TODAY_DAYS+1);
@@ -340,21 +341,19 @@ describe("CookDistribution", ()=>{
       await priceConsumer.connect(owner).set("510000");
       await cookInstance.setToday(TODAY_DAYS+6);
       await cookInstance.connect(owner).updatePriceFeed();
-
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(0);
 
       await oracle.connect(owner).set("1000000000000000000");
       await priceConsumer.connect(owner).set("510000");
       await cookInstance.setToday(TODAY_DAYS+7);
       await cookInstance.connect(owner).updatePriceFeed();
-
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(12);
 
       await oracle.connect(owner).set("1000000000000000000");
       await priceConsumer.connect(owner).set("6900000");
       await cookInstance.setToday(TODAY_DAYS+8);
       await cookInstance.connect(owner).updatePriceFeed();
-
+      expect(await cookInstance.connect(owner).getNextPriceUnlockStep()).to.equal(1);
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(12);
 
       for(let i=9; i<18; i++){
@@ -365,6 +364,7 @@ describe("CookDistribution", ()=>{
       }
 
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(60);
+      expect(await cookInstance.connect(owner).getNextPriceUnlockStep()).to.equal(2);
 
       for(let i=18; i<62; i++){
         await oracle.connect(owner).set("1000000000000000000");
@@ -372,7 +372,7 @@ describe("CookDistribution", ()=>{
         await cookInstance.setToday(TODAY_DAYS+i);
         await cookInstance.connect(owner).updatePriceFeed();
       }
-
+      expect(await cookInstance.connect(owner).getNextPriceUnlockStep()).to.equal(4);
 
       await oracle.connect(owner).set("1000000000000000000");
       await priceConsumer.connect(owner).set("1400001");
@@ -381,8 +381,6 @@ describe("CookDistribution", ()=>{
 
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(200);
 
-
-
       await oracle.connect(owner).set("1");
       await priceConsumer.connect(owner).set("1");
       await cookInstance.setToday(TODAY_DAYS+63);
@@ -390,19 +388,24 @@ describe("CookDistribution", ()=>{
 
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(200);
 
+      // Set Price Based Move step = 2
+      expect(await cookInstance.connect(owner).setPriceBasedMaxStep(2));
+      for(let i=64; i<73; i++){
+        await oracle.connect(owner).set("1000000000000000000");
+        await priceConsumer.connect(owner).set("2300001");
+        await cookInstance.setToday(TODAY_DAYS+i);
+        await cookInstance.connect(owner).updatePriceFeed();
+      }
+      expect(await cookInstance.connect(owner).getNextPriceUnlockStep()).to.equal(6);
+
       await cookInstance.setToday(TODAY_DAYS+301);
-
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(1000);
-
-
-
     })
 
   })
 
   describe("Price Schedule", ()=>{
     beforeEach(async ()=> {
-
       const cookDistributionFactory = await ethers.getContractFactory(
         "MockCookDistribution",
         owner
@@ -418,7 +421,6 @@ describe("CookDistribution", ()=>{
 
     it("has correct init value", async() => {
       expect(await cookInstance.getPricePercentageMappingE(500000)).to.equal(1);
-
     })
 
     it("has correct after update", async() => {
@@ -432,8 +434,6 @@ describe("CookDistribution", ()=>{
       expect(await cookInstance.getPricePercentageMappingE(800000)).to.equal(8);
       expect(await cookInstance.getPricePercentageMappingE(400000)).to.equal(3);
     })
-
   })
-
 
 })
