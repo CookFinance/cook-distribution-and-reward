@@ -54,6 +54,10 @@ contract PoolGetters is PoolState {
         return Constants.getStakeLockupDuration();
     }
 
+    function getVestingDuration() virtual public view returns (uint256) {
+        return Constants.getVestingDuration();
+    }
+
     function blockNumber() virtual internal view returns (uint256) {
         return block.number;
     }
@@ -150,7 +154,7 @@ contract PoolGetters is PoolState {
             uint32 startDay = uint32(start / SECONDS_PER_DAY);
             uint32 today = uint32(blockTimestamp() / SECONDS_PER_DAY);
             uint32 vestingInterval = Constants.getVestingInterval();
-            uint256 vestingDuration = Constants.getVestingDuration();
+            uint256 vestingDuration = getVestingDuration();
 
             if (today >= (startDay + vestingDuration)) {
                 claimable += totalVestingAmount; // If after end of vesting, then the vested amount is total amount.

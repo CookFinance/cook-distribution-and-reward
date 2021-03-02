@@ -29,6 +29,7 @@ async function latest (addtime:number = 0) {
 const INITIAL_STAKE_MULTIPLE = 1e6;
 const REWARD_PER_BLOCK = 1000;
 const STAKE_LOCKUP_DURATION = 10;
+const VESTING_DURATION = 180;
 
 describe("Pool", function () {
   let cookInstance : MockCOOK;
@@ -100,7 +101,7 @@ describe("Pool", function () {
       owner
     );
 
-    poolInstance = (await poolFactory.deploy(cookInstance.address, this.pairAddress, STAKE_LOCKUP_DURATION, REWARD_PER_BLOCK)) as MockPool;
+    poolInstance = (await poolFactory.deploy(cookInstance.address, this.pairAddress, STAKE_LOCKUP_DURATION, VESTING_DURATION, REWARD_PER_BLOCK)) as MockPool;
     this.pool = await poolInstance.deployed();
     this.pool.setBlockNumber(0);
 
@@ -456,82 +457,105 @@ describe("Pool", function () {
       await this.pool.connect(userA).stake(stakeAmount);
     });
 
-    describe('With no reward', async function() {
-      it('harvest should be reverted when total reward is 0' , async function() {
-        expect(await this.pool.totalRewarded()).to.be.equal(0);
-        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(0);
-        await expect(this.pool.connect(userA).harvest(5)).to.be.revertedWith("insufficient total rewarded");
+    describe('With no vesting duration', function() {
+      beforeEach('set vesting duration to 0', async function () {
+        await this.pool.setVestingDuration(0);
       });
 
-      it('harvest should be reverted when no reward for given user' , async function() {
-        const newBlockNumber = 10;
-        // user B stakes 20 at block number 10
-        await this.univ2.connect(owner).transfer(addrUserB, 20);
-        await this.univ2.connect(userB).approve(this.pool.address, 20);
-        await this.pool.setBlockNumber(newBlockNumber);
-        await this.pool.connect(userB).stake(20);
-
-        let expectedReward = (newBlockNumber - initialBlockNumber)*REWARD_PER_BLOCK;
-        expect(await this.pool.totalRewarded()).to.be.equal(expectedReward);
-        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
-        expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(0);
-
-        await expect(this.pool.connect(userB).harvest(5)).to.be.revertedWith("insufficient rewarded balance");
-      });
-    });
-
-    describe('With reward', async function() {
-      const newBlockNumber = 60;
-      const newStakeAmount = 5;
-
-      beforeEach('userA stakes 5 at block number 10', async function() {
+      it('all the rewards should be claimable right after harvest', async function() {
+        const newBlockNumber = 60;
+        const newStakeAmount = 5;
         await this.pool.setBlockNumber(newBlockNumber);
         await this.pool.connect(userA).stake(newStakeAmount);
-      });
 
-      it('should not be able to harvest zero or negative amount', async function () {
-        await expect(this.pool.connect(userA).harvest(-10)).to.be.reverted;
-        await expect(this.pool.connect(userA).harvest(0)).to.be.revertedWith("zero harvest amount");
-      });
-
-      it('should be able to harvest and the user state and total state should be updated' , async function() {
         let expectedReward = (newBlockNumber-initialBlockNumber)*REWARD_PER_BLOCK;
-        let totalStakeAmount = stakeAmount + newStakeAmount;
         expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
         await this.pool.setBlockTimestamp(initialTimestamp);
         let harvestAmount = expectedReward;
         await this.pool.connect(userA).harvest(harvestAmount);
-
-        expect(await this.pool.totalRewarded()).to.be.equal(0);
-        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(0);
-        expect(await this.pool.lastRewardBlock()).to.be.equal(newBlockNumber);
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
-        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(harvestAmount);
-        expect(await this.pool.totalVesting()).to.be.equal(harvestAmount);
-        expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(totalStakeAmount);
-        expect(await this.pool.totalStaked()).to.be.equal(totalStakeAmount);
-        let expectedPhantom = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK / 2 + harvestAmount + INITIAL_STAKE_MULTIPLE*15;
-        expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(expectedPhantom);
-        expect(await this.pool.totalPhantom()).to.be.equal(expectedPhantom);
-
-        await this.pool.setBlockTimestamp(1599696000); // 1598400000+(86400*15) after 15 days
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
-
-        await this.pool.setBlockTimestamp(1600992000); // 1598400000+(86400*30) after 1 months
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount/6);
-
-        await this.pool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) after 3 months
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount/2);
-
-        await this.pool.setBlockTimestamp(1613952000); // 1598400000+(86400*180) after 6 months
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount);
       });
+    });
 
-      it('should emit Harvest event with correct amount', async function() {
-        await expect(this.pool.connect(userA).harvest(5))
-          .to.emit(this.pool, 'Harvest')
-          .withArgs(await userA.getAddress(), 5);
+    describe('With vesting duration', function() {
+      describe('With no reward', async function() {
+        it('harvest should be reverted when total reward is 0' , async function() {
+          expect(await this.pool.totalRewarded()).to.be.equal(0);
+          expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(0);
+          await expect(this.pool.connect(userA).harvest(5)).to.be.revertedWith("insufficient total rewarded");
+        });
+
+        it('harvest should be reverted when no reward for given user' , async function() {
+          const newBlockNumber = 10;
+          // user B stakes 20 at block number 10
+          await this.univ2.connect(owner).transfer(addrUserB, 20);
+          await this.univ2.connect(userB).approve(this.pool.address, 20);
+          await this.pool.setBlockNumber(newBlockNumber);
+          await this.pool.connect(userB).stake(20);
+
+          let expectedReward = (newBlockNumber - initialBlockNumber)*REWARD_PER_BLOCK;
+          expect(await this.pool.totalRewarded()).to.be.equal(expectedReward);
+          expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
+          expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(0);
+
+          await expect(this.pool.connect(userB).harvest(5)).to.be.revertedWith("insufficient rewarded balance");
+        });
+      });
+
+      describe('With reward', async function() {
+        const newBlockNumber = 60;
+        const newStakeAmount = 5;
+
+        beforeEach('userA stakes 5 at block number 10', async function() {
+          await this.pool.setBlockNumber(newBlockNumber);
+          await this.pool.connect(userA).stake(newStakeAmount);
+        });
+
+        it('should not be able to harvest zero or negative amount', async function () {
+          await expect(this.pool.connect(userA).harvest(-10)).to.be.reverted;
+          await expect(this.pool.connect(userA).harvest(0)).to.be.revertedWith("zero harvest amount");
+        });
+
+        it('should be able to harvest and the user state and total state should be updated' , async function() {
+          let expectedReward = (newBlockNumber-initialBlockNumber)*REWARD_PER_BLOCK;
+          let totalStakeAmount = stakeAmount + newStakeAmount;
+          expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
+
+          await this.pool.setBlockTimestamp(initialTimestamp);
+          let harvestAmount = expectedReward;
+          await this.pool.connect(userA).harvest(harvestAmount);
+
+          expect(await this.pool.totalRewarded()).to.be.equal(0);
+          expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(0);
+          expect(await this.pool.lastRewardBlock()).to.be.equal(newBlockNumber);
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
+          expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(harvestAmount);
+          expect(await this.pool.totalVesting()).to.be.equal(harvestAmount);
+          expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(totalStakeAmount);
+          expect(await this.pool.totalStaked()).to.be.equal(totalStakeAmount);
+          let expectedPhantom = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK / 2 + harvestAmount + INITIAL_STAKE_MULTIPLE*15;
+          expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(expectedPhantom);
+          expect(await this.pool.totalPhantom()).to.be.equal(expectedPhantom);
+
+          await this.pool.setBlockTimestamp(1599696000); // 1598400000+(86400*15) after 15 days
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
+
+          await this.pool.setBlockTimestamp(1600992000); // 1598400000+(86400*30) after 1 months
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount/6);
+
+          await this.pool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) after 3 months
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount/2);
+
+          await this.pool.setBlockTimestamp(1613952000); // 1598400000+(86400*180) after 6 months
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount);
+        });
+
+        it('should emit Harvest event with correct amount', async function() {
+          await expect(this.pool.connect(userA).harvest(5))
+            .to.emit(this.pool, 'Harvest')
+            .withArgs(await userA.getAddress(), 5);
+        });
       });
     });
   });
@@ -541,85 +565,121 @@ describe("Pool", function () {
     const initialTimestamp = 1598400000;
     const initialHarvestAmount = 60;
 
-    beforeEach('userA stakes to get rewards and harvests half rewards', async function() {
-      await this.pool.setBlockNumber(initialBlockNumber);
-      await this.univ2.connect(owner).transfer(addrUserA, 20);
-      await this.univ2.connect(userA).approve(this.pool.address, 20);
-
-      // user A stakes 10 at block number 1
-      let newBlockNumber = 1;
-      await this.pool.setBlockNumber(newBlockNumber);
-      await this.pool.connect(userA).stake(10);
-      let lastRewardBlock = newBlockNumber;
-
-      // user A stakes 5 at block number 61
-      newBlockNumber = 61;
-      await this.pool.setBlockNumber(newBlockNumber);
-      await this.pool.connect(userA).stake(5);
-      let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
-      expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
-
-      await this.pool.setBlockTimestamp(initialTimestamp);
-      await this.pool.connect(userA).harvest(initialHarvestAmount);
-
-      expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward-initialHarvestAmount);
-      expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
-      expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount);
-    });
-
-    describe('during vesting period', function() {
-      beforeEach('advance after half of the vesting schedule', async function () {
-        await this.pool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) => after 3 months
+    describe('With no vesting duration', function() {
+      beforeEach('set vesting duration to 0', async function () {
+        await this.pool.setVestingDuration(0);
       });
 
-      it('should be able to claim the the vested amount', async function () {
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount/2);
-        await expect(this.pool.connect(userA).claim(initialHarvestAmount/2)).to.not.be.reverted;
-      });
+      it('should be able to claim all the rewards right after harvest', async function() {
+        await this.pool.setBlockNumber(initialBlockNumber);
+        await this.univ2.connect(owner).transfer(addrUserA, 20);
+        await this.univ2.connect(userA).approve(this.pool.address, 20);
 
-      it('should get reverted if tries to claim the amount more than the claimable', async function() {
-        await expect(this.pool.connect(userA).claim(initialHarvestAmount/2 + 5)).to.be.revertedWith("insufficient claimable balance");
-      });
+        // user A stakes 10 at block number 1
+        let newBlockNumber = 1;
+        await this.pool.setBlockNumber(newBlockNumber);
+        await this.pool.connect(userA).stake(10);
+        let lastRewardBlock = newBlockNumber;
 
-      it('the balance of claimable for userA should be updated correctly and userA can claim part of the claimable' , async function() {
-        let claimable = initialHarvestAmount/2;
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(claimable);
+        // user A stakes 5 at block number 61
+        newBlockNumber = 61;
+        await this.pool.setBlockNumber(newBlockNumber);
+        await this.pool.connect(userA).stake(5);
+        let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
-        let claimed = claimable/2;
-        await this.pool.connect(userA).claim(claimed);
-        let remainingClaimable = claimable-claimed;
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
+        await this.pool.setBlockTimestamp(initialTimestamp);
+        await this.pool.connect(userA).harvest(expectedReward);
 
-        let remainingReward = await this.pool.balanceOfRewarded(addrUserA);
-        let harvestAmount = remainingReward/1;
-        await this.pool.connect(userA).harvest(harvestAmount);
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
-        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount+harvestAmount);
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(0);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(expectedReward);
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(expectedReward);
 
-        await this.pool.setBlockTimestamp(1613952000); // 1598400000+(86400*180) => after 6 months for the inital harvest and after 3 months for the second harvest
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount+(harvestAmount/2)-claimed);
+        await expect(this.pool.connect(userA).claim(expectedReward)).to.not.be.reverted;
       });
     });
 
-    describe('after full vesting', function () {
-      beforeEach('advance after full vesting', async function () {
-        await this.pool.setBlockTimestamp(1613952000); // 1598400000+(86400*180) => after 6 months
+    describe('With normal vesting duration', function() {
+      beforeEach('userA stakes to get rewards and harvests half rewards', async function() {
+        await this.pool.setBlockNumber(initialBlockNumber);
+        await this.univ2.connect(owner).transfer(addrUserA, 20);
+        await this.univ2.connect(userA).approve(this.pool.address, 20);
+
+        // user A stakes 10 at block number 1
+        let newBlockNumber = 1;
+        await this.pool.setBlockNumber(newBlockNumber);
+        await this.pool.connect(userA).stake(10);
+        let lastRewardBlock = newBlockNumber;
+
+        // user A stakes 5 at block number 61
+        newBlockNumber = 61;
+        await this.pool.setBlockNumber(newBlockNumber);
+        await this.pool.connect(userA).stake(5);
+        let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
+
+        await this.pool.setBlockTimestamp(initialTimestamp);
+        await this.pool.connect(userA).harvest(initialHarvestAmount);
+
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward-initialHarvestAmount);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount);
       });
 
-      it('should be able to claim the full vesting amount', async function () {
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount);
-        await expect(this.pool.connect(userA).claim(initialHarvestAmount)).to.not.be.reverted;
+      describe('during vesting period', function() {
+        beforeEach('advance after half of the vesting schedule', async function () {
+          await this.pool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) => after 3 months
+        });
+
+        it('should be able to claim the the vested amount', async function () {
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount/2);
+          await expect(this.pool.connect(userA).claim(initialHarvestAmount/2)).to.not.be.reverted;
+        });
+
+        it('should get reverted if tries to claim the amount more than the claimable', async function() {
+          await expect(this.pool.connect(userA).claim(initialHarvestAmount/2 + 5)).to.be.revertedWith("insufficient claimable balance");
+        });
+
+        it('the balance of claimable for userA should be updated correctly and userA can claim part of the claimable' , async function() {
+          let claimable = initialHarvestAmount/2;
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(claimable);
+
+          let claimed = claimable/2;
+          await this.pool.connect(userA).claim(claimed);
+          let remainingClaimable = claimable-claimed;
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
+
+          let remainingReward = await this.pool.balanceOfRewarded(addrUserA);
+          let harvestAmount = remainingReward/1;
+          await this.pool.connect(userA).harvest(harvestAmount);
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
+          expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount+harvestAmount);
+
+          await this.pool.setBlockTimestamp(1613952000); // 1598400000+(86400*180) => after 6 months for the inital harvest and after 3 months for the second harvest
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount+(harvestAmount/2)-claimed);
+        });
       });
 
-      it('should not be able to claim zero or negative amount', async function () {
-        await expect(this.pool.connect(userA).claim(-10)).to.be.reverted;
-        await expect(this.pool.connect(userA).claim(0)).to.be.revertedWith("zero claim amount");
-      });
+      describe('after full vesting', function () {
+        beforeEach('advance after full vesting', async function () {
+          await this.pool.setBlockTimestamp(1613952000); // 1598400000+(86400*180) => after 6 months
+        });
 
-      it('Claim event should be emitted correctly', async function() {
-        await expect(this.pool.connect(userA).claim(initialHarvestAmount))
-          .to.emit(this.pool, 'Claim')
-          .withArgs(await userA.getAddress(), initialHarvestAmount);
+        it('should be able to claim the full vesting amount', async function () {
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount);
+          await expect(this.pool.connect(userA).claim(initialHarvestAmount)).to.not.be.reverted;
+        });
+
+        it('should not be able to claim zero or negative amount', async function () {
+          await expect(this.pool.connect(userA).claim(-10)).to.be.reverted;
+          await expect(this.pool.connect(userA).claim(0)).to.be.revertedWith("zero claim amount");
+        });
+
+        it('Claim event should be emitted correctly', async function() {
+          await expect(this.pool.connect(userA).claim(initialHarvestAmount))
+            .to.emit(this.pool, 'Claim')
+            .withArgs(await userA.getAddress(), initialHarvestAmount);
+        });
       });
     });
   });

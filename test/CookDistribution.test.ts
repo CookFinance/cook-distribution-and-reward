@@ -133,18 +133,18 @@ describe("CookDistribution", ()=>{
 
     })
 
-    it("has zero vested", async() => {
-      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),TODAY_DAYS)).to.equal(0);
+    it("has one percent vested", async() => {
+      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),TODAY_DAYS)).to.equal(12);
     })
 
-    it("has zero vested after 20 days", async() => {
+    it("has one percent vested after 20 days", async() => {
       await cookInstance.setToday(TODAY_DAYS+20);
-      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),0)).to.equal(0);
+      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),0)).to.equal(12);
     })
 
-    it("has zero vested after 29 days", async() => {
+    it("has one percent vested after 29 days", async() => {
       await cookInstance.setToday(TODAY_DAYS+29);
-      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),0)).to.equal(0);
+      expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(),0)).to.equal(12);
     })
 
     it("has 100 vested after 30 days", async() => {
@@ -325,7 +325,7 @@ describe("CookDistribution", ()=>{
       await cookInstance.setToday(TODAY_DAYS+3);
       await cookInstance.connect(owner).updatePriceFeed();
 
-      expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(0);
+      expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(12);
 
       await oracle.connect(owner).set("1000000000000000000");
       await priceConsumer.connect(owner).set("510000");
@@ -341,7 +341,7 @@ describe("CookDistribution", ()=>{
       await priceConsumer.connect(owner).set("510000");
       await cookInstance.setToday(TODAY_DAYS+6);
       await cookInstance.connect(owner).updatePriceFeed();
-      expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(0);
+      expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(12);
 
       await oracle.connect(owner).set("1000000000000000000");
       await priceConsumer.connect(owner).set("510000");
@@ -355,6 +355,7 @@ describe("CookDistribution", ()=>{
       await cookInstance.connect(owner).updatePriceFeed();
       expect(await cookInstance.connect(owner).getNextPriceUnlockStep()).to.equal(1);
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal(12);
+
 
       for(let i=9; i<18; i++){
         await oracle.connect(owner).set("1000000000000000000");

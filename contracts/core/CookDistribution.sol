@@ -142,7 +142,8 @@ contract CookDistribution is Ownable {
     _duration = duration;
     _start = start;
     _interval = interval;
-    _advancePercentage = 0;
+    // init release percentage is 1%
+    _advancePercentage = 1;
     _oracle = IOracle(oracle_);
     _priceConsumer = IPriceConsumerV3(priceConsumer_);
     _lastPriceUnlockDay = 0;
@@ -232,7 +233,7 @@ contract CookDistribution is Ownable {
           return _beneficiaryAllocations[userAddress].amount;
         }
         // If it's before the vesting then the vested amount is zero.
-        else if (onDay <= startDay())
+        else if (onDay < startDay())
         {
             // All are vested (none are not vested)
             return uint256(0);
