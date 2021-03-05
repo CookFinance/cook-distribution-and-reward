@@ -1,22 +1,20 @@
 pragma solidity ^0.6.2;
 
-import "../core/Pool.sol";
+import "../core/CookPool.sol";
 import "./MockState.sol";
 import "../core/Constants.sol";
 
-contract MockPool is Pool, MockState {
+contract MockCookPool is CookPool, MockState {
 
     uint256 private _blockNumber;
     uint256 private _blockTimestamp;
     uint256 private _stakeLockupDuration;
     uint256 private _vestingDuration;
     address private _cook;
-    address private _univ2;
 
-    constructor(address cook, address univ2, uint256 stakeLockupDuration, uint256 vestingDuration, uint256 cook_reward_per_block)
-    Pool(cook, univ2, cook_reward_per_block, 0, 0) public {
+    constructor(address cook, uint256 stakeLockupDuration, uint256 vestingDuration, uint256 cook_reward_per_block)
+    CookPool(cook, cook_reward_per_block, 0, 0) public {
         _cook = cook;
-        _univ2 = univ2;
         _blockNumber = block.number;
         _blockTimestamp = block.timestamp;
         _stakeLockupDuration = stakeLockupDuration;
@@ -28,7 +26,7 @@ contract MockPool is Pool, MockState {
     }
 
     function univ2() public override view returns (IERC20) {
-        return IERC20(_univ2);
+        return IERC20(_cook);
     }
 
     /**
@@ -54,7 +52,7 @@ contract MockPool is Pool, MockState {
         return _blockTimestamp;
     }
 
-     function blockTimestampE() external view returns (uint256) {
+    function blockTimestampE() external view returns (uint256) {
         return _blockTimestamp;
     }
 

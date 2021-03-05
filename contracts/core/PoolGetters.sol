@@ -13,8 +13,8 @@ contract PoolGetters is PoolState {
     /**
      * Global
      */
-    function dollar() virtual public view returns (IERC20) {
-        return _state.provider.dollar;
+    function cook() virtual public view returns (IERC20) {
+        return _state.provider.cook;
     }
 
     function univ2() virtual public view returns (IERC20) {

@@ -725,28 +725,28 @@ describe("Pool", function () {
 
       it('should be able to zap the the vested amount', async function () {
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount/2);
-        await this.pool.connect(userA).zap(initialHarvestAmount/2)
+        await this.pool.connect(userA).zapLP(initialHarvestAmount/2)
       });
 
       it('Cap limit', async function () {
         await poolInstance.connect(owner).setTotalPoolCapLimit(1);
-        await expect(poolInstance.connect(userA).zap(initialHarvestAmount/2)).to.be.revertedWith('The amount to be staked will exceed pool limit');
+        await expect(poolInstance.connect(userA).zapLP(initialHarvestAmount/2)).to.be.revertedWith('The amount to be staked will exceed pool limit');
 
         await poolInstance.connect(owner).setTotalPoolCapLimit(initialHarvestAmount * 2);
         await poolInstance.connect(owner).setStakeLimitPerAddress(1);
-        await expect(poolInstance.connect(userA).zap(initialHarvestAmount/2)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
+        await expect(poolInstance.connect(userA).zapLP(initialHarvestAmount/2)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
 
         await poolInstance.connect(owner).setStakeLimitPerAddress(initialHarvestAmount * 2);
-        await this.pool.connect(userA).zap(initialHarvestAmount/2);
+        await this.pool.connect(userA).zapLP(initialHarvestAmount/2);
       });
 
       it('should not be able to zap zero or negative amount', async function () {
-        await expect(this.pool.connect(userA).zap(-10)).to.be.reverted;
-        await expect(this.pool.connect(userA).zap(0)).to.be.revertedWith("zero zap amount");
+        await expect(this.pool.connect(userA).zapLP(-10)).to.be.reverted;
+        await expect(this.pool.connect(userA).zapLP(0)).to.be.revertedWith("zero zap amount");
       });
 
       it('should get reverted if tries to zap the amount more than the claimable', async function() {
-        await expect(this.pool.connect(userA).zap(initialHarvestAmount/2 + 5)).to.be.revertedWith("insufficient claimable balance");
+        await expect(this.pool.connect(userA).zapLP(initialHarvestAmount/2 + 5)).to.be.revertedWith("insufficient claimable balance");
       });
 
       it('the balance of claimable for userA should be updated correctly and userA can zap part of the claimable' , async function() {
@@ -755,7 +755,7 @@ describe("Pool", function () {
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(claimable);
 
         let zapCookAmount = claimable/2;
-        await this.pool.connect(userA).zap(zapCookAmount);
+        await this.pool.connect(userA).zapLP(zapCookAmount);
         let remainingClaimable = claimable-zapCookAmount;
         let expectedNewUniv2 = zapCookAmount;
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
@@ -767,9 +767,9 @@ describe("Pool", function () {
         let zapCookAmount = initialHarvestAmount/2;
         let expectedWethAmount = zapCookAmount;
         let expectedUniv2Amount = zapCookAmount;
-        await expect(this.pool.connect(userA).zap(zapCookAmount))
-          .to.emit(this.pool, 'Zap')
-          .withArgs(await userA.getAddress(), zapCookAmount, expectedWethAmount, expectedUniv2Amount);
+        await expect(this.pool.connect(userA).zapLP(zapCookAmount))
+          .to.emit(this.pool, 'ZapLP')
+          .withArgs(await userA.getAddress(), expectedUniv2Amount);
       });
     });
 
@@ -782,17 +782,17 @@ describe("Pool", function () {
       it('should be able to zap the vested amount with ETH', async function () {
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount/2);
         let overrides = {value: ethers.utils.parseEther('0.00000000000000003'), gasLimit: 600000}
-        await this.pool.connect(userA).zapWithEth(initialHarvestAmount/2, overrides);
+        await this.pool.connect(userA).zapLPWithEth(initialHarvestAmount/2, overrides);
       });
 
       it('should not be able to zap zero or negative amount with ETH', async function () {
-        await expect(this.pool.connect(userA).zapWithEth(-10000000)).to.be.reverted;
-        await expect(this.pool.connect(userA).zapWithEth(0)).to.be.revertedWith("zero zap amount");
+        await expect(this.pool.connect(userA).zapLPWithEth(-10000000)).to.be.reverted;
+        await expect(this.pool.connect(userA).zapLPWithEth(0)).to.be.revertedWith("zero zap amount");
       });
 
       it('should get reverted if tries to zap the cook amount with ETH more than the claimable', async function() {
         let overrides = {value: ethers.utils.parseEther('0.0000000000000003'), gasLimit: 600000}
-        await expect(this.pool.connect(userA).zapWithEth(initialHarvestAmount/2 + 5000000000000000)).to.be.revertedWith("insufficient claimable balance");
+        await expect(this.pool.connect(userA).zapLPWithEth(initialHarvestAmount/2 + 5000000000000000)).to.be.revertedWith("insufficient claimable balance");
       });
 
       it('the balance of claimable for userA should be updated correctly and userA can zap part of the claimable' , async function() {
@@ -801,7 +801,7 @@ describe("Pool", function () {
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(claimable);
 
         let zapCookAmount = claimable/2;
-        await this.pool.connect(userA).zap(zapCookAmount);
+        await this.pool.connect(userA).zapLP(zapCookAmount);
         let remainingClaimable = claimable-zapCookAmount;
         let expectedNewUniv2 = zapCookAmount;
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
@@ -813,9 +813,9 @@ describe("Pool", function () {
         let zapCookAmount = initialHarvestAmount/2;
         let expectedWethAmount = zapCookAmount;
         let expectedUniv2Amount = zapCookAmount;
-        await expect(this.pool.connect(userA).zap(zapCookAmount))
-          .to.emit(this.pool, 'Zap')
-          .withArgs(await userA.getAddress(), zapCookAmount, expectedWethAmount, expectedUniv2Amount);
+        await expect(this.pool.connect(userA).zapLP(zapCookAmount))
+          .to.emit(this.pool, 'ZapLP')
+          .withArgs(await userA.getAddress(), expectedUniv2Amount);
       });
     });
   });

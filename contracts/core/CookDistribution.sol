@@ -301,6 +301,76 @@ contract CookDistribution is Ownable {
     return _pricePercentageMapping[priceKey];
   }
 
+function _calWethAmountToPairCook(uint256 cookAmount) internal returns (uint256, address) {
+    // get pair address
+    IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
+    uint reserve0;
+    uint reserve1;
+    address weth;
+
+    if (lpPair.token0() == address(_token)){
+      (reserve0, reserve1,) = lpPair.getReserves();
+      weth = lpPair.token1();
+    } else {
+      (reserve1, reserve0,) = lpPair.getReserves();
+      weth = lpPair.token0();
+    }
+
+    uint256 wethAmount = (reserve0 == 0 && reserve1 == 0) ?
+      cookAmount :
+      UniswapV2Library.quote(cookAmount, reserve0, reserve1);
+
+    return (wethAmount, weth);
+  }
+  // Zap into LP staking pool functions
+  function zapLPWithEth(uint256 cookAmount, address poolAddress) external payable {
+    _zapLP(cookAmount, poolAddress, true);
+  }
+
+  function zapLP(uint256 cookAmount, address poolAddress) external {
+    _zapLP(cookAmount, poolAddress, false);
+  }
+
+  function _zapLP(uint256 cookAmount, address poolAddress, bool isWithEth) internal {
+    address userAddress = msg.sender;
+    _checkValidZap(userAddress, cookAmount);
+    
+    uint256 newUniv2 = 0;
+
+    if (isWithEth) {
+      (, newUniv2) = addLiquidityWithEth(cookAmount);
+    } else {
+      (, newUniv2) = addLiquidity(cookAmount);
+    }
+
+    IERC20(_oracle.pairAddress()).approve(poolAddress,newUniv2);
+
+    IPool(poolAddress).zapStake(newUniv2,userAddress);
+  }
+
+  function _checkValidZap(address userAddress, uint256 cookAmount) internal {
+    require(
+        _isRegistered[userAddress] == true,
+        "You have to be a registered address in order to release tokens."
+    );
+
+    require(
+        _isBlacklisted[userAddress] == false,
+        "Your address is blacklisted"
+    );
+
+    require(
+      _pauseClaim == false,
+      "Cook token cane not be zap due to emgergency"
+    );
+
+    require(cookAmount > 0,"zero zap amount");
+
+    require(getUserAvailableAmount(userAddress,today()) >= cookAmount,"insufficient avalible cook balance");
+
+    _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[userAddress].released.add(cookAmount);
+  }
+
   function addLiquidity(uint256 cookAmount) internal returns (uint256, uint256) {
       // get pair address
       (uint256 wethAmount,) = _calWethAmountToPairCook(cookAmount);
@@ -346,72 +416,14 @@ contract CookDistribution is Ownable {
       }
 
       return (wethAmount, lpPair.mint(address(this)));
-  }
+  }  
 
-function _calWethAmountToPairCook(uint256 cookAmount) internal returns (uint256, address) {
-    // get pair address
-    IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
-    uint reserve0;
-    uint reserve1;
-    address weth;
-
-    if (lpPair.token0() == address(_token)){
-      (reserve0, reserve1,) = lpPair.getReserves();
-      weth = lpPair.token1();
-    } else {
-      (reserve1, reserve0,) = lpPair.getReserves();
-      weth = lpPair.token0();
-    }
-
-    uint256 wethAmount = (reserve0 == 0 && reserve1 == 0) ?
-      cookAmount :
-      UniswapV2Library.quote(cookAmount, reserve0, reserve1);
-
-    return (wethAmount, weth);
-  }
-
-  function zapWithEth(uint256 cookAmount, address poolAddress) external payable {
-    _zap(cookAmount, poolAddress, true);
-  }
-
-  function zap(uint256 cookAmount, address poolAddress) external {
-    _zap(cookAmount, poolAddress, false);
-  }
-
-  function _zap(uint256 cookAmount, address poolAddress, bool isWithEth) internal {
+  // Zap into Cook staking pool functions
+  function zapCook(uint256 cookAmount, address cookPoolAddress) external payable {
     address userAddress = msg.sender;
-
-    require(
-        _isRegistered[userAddress] == true,
-        "You have to be a registered address in order to release tokens."
-    );
-
-    require(
-        _isBlacklisted[userAddress] == false,
-        "Your address is blacklisted"
-    );
-
-    require(
-      _pauseClaim == false,
-      "Cook token cane not be zap due to emgergency"
-    );
-
-    require(cookAmount > 0,"zero zap amount");
-
-    require(getUserAvailableAmount(userAddress,today()) >= cookAmount,"insufficient avalible cook balance");
-
-    _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[userAddress].released.add(cookAmount);
-    uint256 newUniv2 = 0;
-
-    if (isWithEth) {
-      (, newUniv2) = addLiquidityWithEth(cookAmount);
-    } else {
-      (, newUniv2) = addLiquidity(cookAmount);
-    }
-
-    IERC20(_oracle.pairAddress()).approve(poolAddress,newUniv2);
-
-    IPool(poolAddress).zapStake(newUniv2,userAddress);
+    _checkValidZap(userAddress, cookAmount);
+    IERC20(address(_token)).approve(cookPoolAddress, cookAmount);
+    IPool(cookPoolAddress).zapStake(cookAmount, userAddress);
   }
 
   // Admin Functions

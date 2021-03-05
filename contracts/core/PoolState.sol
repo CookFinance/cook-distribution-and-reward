@@ -20,7 +20,7 @@ struct Vesting {
 
 contract Storage {
     struct Provider {
-        IERC20 dollar;
+        IERC20 cook;
         IERC20 univ2;
 
     }
