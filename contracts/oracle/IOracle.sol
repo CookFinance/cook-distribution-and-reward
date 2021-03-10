@@ -18,6 +18,7 @@ pragma solidity ^0.6.2;
 pragma experimental ABIEncoderV2;
 
 abstract contract IOracle {
-    function update() virtual external returns (uint256);
-    function pairAddress() virtual external view returns (address);
+    function update() external virtual returns (uint256);
+
+    function pairAddress() external view virtual returns (address);
 }

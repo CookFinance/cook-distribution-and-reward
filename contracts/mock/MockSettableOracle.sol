@@ -24,18 +24,18 @@ contract MockSettableOracle is IOracle {
     address internal _pairAddress;
 
     constructor(address pairAddress_) public {
-      _pairAddress = pairAddress_;
+        _pairAddress = pairAddress_;
     }
 
     function set(uint256 price) external {
         _price = price;
     }
 
-    function update() override external returns (uint256 price) {
+    function update() external override returns (uint256 price) {
         return _price;
     }
 
-    function pairAddress() override public view returns (address) {
-      return _pairAddress;
+    function pairAddress() public view override returns (address) {
+        return _pairAddress;
     }
 }

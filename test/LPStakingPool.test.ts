@@ -17,12 +17,12 @@ const UniswapV2FactoryABI = require('@uniswap/v2-core/build/UniswapV2Factory.jso
 const UniswapV2Router02Bytecode = require('@uniswap/v2-periphery/build/UniswapV2Router02.json').bytecode;
 const UniswapV2Router02ABI = require('@uniswap/v2-periphery/build/UniswapV2Router02.json').abi;
 
-const getAddress = async(signer:Signer) => {
+const getAddress = async (signer: Signer) => {
   return await signer.getAddress();
 }
 
-async function latest (addtime:number = 0) {
-  const block = await ethers.provider.send("eth_getBlockByNumber",['latest',false]);
+async function latest(addtime: number = 0) {
+  const block = await ethers.provider.send("eth_getBlockByNumber", ['latest', false]);
   return ethers.BigNumber.from(block.timestamp).add(addtime);
 }
 
@@ -32,20 +32,20 @@ const STAKE_LOCKUP_DURATION = 10;
 const VESTING_DURATION = 180;
 
 describe("Pool", function () {
-  let cookInstance : MockCOOK;
-  let wethInstance : TestnetWETH;
-  let poolInstance : MockPool;
+  let cookInstance: MockCOOK;
+  let wethInstance: TestnetWETH;
+  let poolInstance: MockPool;
 
-  let owner : Signer;
-  let userA : Signer;
-  let userB : Signer;
+  let owner: Signer;
+  let userA: Signer;
+  let userB: Signer;
 
-  let addrUserA : Promise<string>;
-  let addrUserB : Promise<string>;
+  let addrUserA: Promise<string>;
+  let addrUserB: Promise<string>;
 
   beforeEach(async function () {
-    [ owner, userA, userB ] = await ethers.getSigners();
-    [ addrUserA, addrUserB ] = [ userA, userB ].map(signer => {
+    [owner, userA, userB] = await ethers.getSigners();
+    [addrUserA, addrUserB] = [userA, userB].map(signer => {
       return getAddress(signer)
     })
 
@@ -72,14 +72,14 @@ describe("Pool", function () {
     this.uni = await uniswapFactory.deploy(await owner.getAddress());
     this.uniswap = await this.uni.deployed();
 
-    await this.uniswap.connect(owner).createPair(this.cook.address,this.weth.address);
+    await this.uniswap.connect(owner).createPair(this.cook.address, this.weth.address);
 
-    this.pairAddress = await this.uniswap.connect(owner).getPair(this.cook.address,this.weth.address);
+    this.pairAddress = await this.uniswap.connect(owner).getPair(this.cook.address, this.weth.address);
 
-    this.univ2 = await ethers.getContractAt("IUniswapV2Pair",this.pairAddress,owner);
+    this.univ2 = await ethers.getContractAt("IUniswapV2Pair", this.pairAddress, owner);
 
-    this.cook.connect(owner).mint(await owner.getAddress(),'10000000000000000000000');
-    this.weth.connect(owner).mint(await owner.getAddress(),'10000000000000000000000');
+    this.cook.connect(owner).mint(await owner.getAddress(), '10000000000000000000000');
+    this.weth.connect(owner).mint(await owner.getAddress(), '10000000000000000000000');
 
     const routerFactory = await ethers.getContractFactory(
       UniswapV2Router02ABI,
@@ -87,13 +87,13 @@ describe("Pool", function () {
       owner
     );
 
-    this.rou = await routerFactory.deploy(this.uniswap.address,this.weth.address);
+    this.rou = await routerFactory.deploy(this.uniswap.address, this.weth.address);
     this.router = await this.rou.deployed();
 
-    await this.cook.connect(owner).approve(this.router.address,'10000000000000000000000');
-    await this.weth.connect(owner).approve(this.router.address,'10000000000000000000000');
+    await this.cook.connect(owner).approve(this.router.address, '10000000000000000000000');
+    await this.weth.connect(owner).approve(this.router.address, '10000000000000000000000');
 
-    await this.router.connect(owner).addLiquidity(this.cook.address,this.weth.address,"10000000000000000000000","10000000000000000000000","100","100",await owner.getAddress(),await latest(1000000000));
+    await this.router.connect(owner).addLiquidity(this.cook.address, this.weth.address, "10000000000000000000000", "10000000000000000000000", "100", "100", await owner.getAddress(), await latest(1000000000));
 
 
     const poolFactory = await ethers.getContractFactory(
@@ -105,7 +105,7 @@ describe("Pool", function () {
     this.pool = await poolInstance.deployed();
     this.pool.setBlockNumber(0);
 
-    this.cook.connect(owner).mint(await poolInstance.address,'1000000000000000000000000');
+    this.cook.connect(owner).mint(await poolInstance.address, '1000000000000000000000000');
   });
 
   describe('Init', function () {
@@ -192,8 +192,8 @@ describe("Pool", function () {
         expect(await poolInstance.connect(owner).removeAddressFromBlacklist(await userB.getAddress()));
 
         await expect(this.pool.connect(userB).stake(10))
-        .to.emit(this.pool, 'Stake')
-        .withArgs(await userB.getAddress(), 10);
+          .to.emit(this.pool, 'Stake')
+          .withArgs(await userB.getAddress(), 10);
       })
 
       it('Emergent withdraw', async function () {
@@ -204,7 +204,7 @@ describe("Pool", function () {
 
     });
 
-    describe('Without approve', function() {
+    describe('Without approve', function () {
       beforeEach('set initial block number and userA has 20 univ2', async function () {
         await this.pool.setBlockNumber(initialBlockNumber);
         expect(await this.pool.blockNumberE()).to.be.equal(initialBlockNumber);
@@ -219,7 +219,7 @@ describe("Pool", function () {
       });
     });
 
-    describe('With approve', function() {
+    describe('With approve', function () {
       beforeEach('set initial block number and userA approves 20 univ2', async function () {
         await this.pool.setBlockNumber(initialBlockNumber);
         expect(await this.pool.blockNumberE()).to.be.equal(initialBlockNumber);
@@ -244,8 +244,8 @@ describe("Pool", function () {
 
         await poolInstance.connect(owner).setStakeLimitPerAddress(100);
         await expect(this.pool.connect(userA).stake(10))
-        .to.emit(this.pool, 'Stake')
-        .withArgs(await userA.getAddress(), 10);
+          .to.emit(this.pool, 'Stake')
+          .withArgs(await userA.getAddress(), 10);
       })
 
       it('should not be able to stake zero or negative amount', async function () {
@@ -253,13 +253,13 @@ describe("Pool", function () {
         await expect(this.pool.connect(userA).stake(0)).to.be.revertedWith("zero stake amount");
       });
 
-      it('should emit Stake event with correct amount', async function() {
+      it('should emit Stake event with correct amount', async function () {
         await expect(this.pool.connect(userA).stake(10))
-        .to.emit(this.pool, 'Stake')
-        .withArgs(await userA.getAddress(), 10);
+          .to.emit(this.pool, 'Stake')
+          .withArgs(await userA.getAddress(), 10);
       });
 
-      describe('With no lockup', function() {
+      describe('With no lockup', function () {
         const stakeAmount = 10;
         const newBlockNumber = 1;
 
@@ -279,12 +279,12 @@ describe("Pool", function () {
           expect(await this.pool.lastRewardBlock()).to.be.equal(newBlockNumber);
           expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(stakeAmount);
           expect(await this.pool.totalStaked()).to.be.equal(stakeAmount);
-          expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE*stakeAmount);
-          expect(await this.pool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE*stakeAmount);
+          expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE * stakeAmount);
+          expect(await this.pool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE * stakeAmount);
         });
       });
 
-      describe('With stake lockup', function() {
+      describe('With stake lockup', function () {
         const stakeAmount = 10;
         const initialTimestamp = 1598400000;
         const lastRewardBlock = initialBlockNumber;
@@ -305,12 +305,12 @@ describe("Pool", function () {
           expect(await this.pool.lastRewardBlock()).to.be.equal(lastRewardBlock);
           expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(stakeAmount);
           expect(await this.pool.totalStaked()).to.be.equal(stakeAmount);
-          expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE*stakeAmount);
-          expect(await this.pool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE*stakeAmount);
+          expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE * stakeAmount);
+          expect(await this.pool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE * stakeAmount);
         });
 
         it('should be unlocked after lockup duration', async function () {
-          await this.pool.setBlockTimestamp(initialTimestamp + (86400 * STAKE_LOCKUP_DURATION-1)); //before lockup period
+          await this.pool.setBlockTimestamp(initialTimestamp + (86400 * STAKE_LOCKUP_DURATION - 1)); //before lockup period
           expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
 
           await this.pool.setBlockTimestamp(initialTimestamp + (86400 * STAKE_LOCKUP_DURATION)); //after lockup period
@@ -325,15 +325,15 @@ describe("Pool", function () {
           await this.pool.setBlockNumber(newBlockNumber);
           await this.pool.connect(userA).stake(newStakeAmount);
 
-          let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+          let expectedReward = (newBlockNumber - lastRewardBlock) * REWARD_PER_BLOCK;
           expect(await this.pool.totalRewarded()).to.be.equal(expectedReward);
           expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
           expect(await this.pool.lastRewardBlock()).to.be.equal(newBlockNumber);
           expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(totalStakeAmount);
           expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
           expect(await this.pool.totalStaked()).to.be.equal(totalStakeAmount);
-          let expectedNewPhantom = (expectedReward + INITIAL_STAKE_MULTIPLE*previousStakeAmount)*newStakeAmount/previousStakeAmount;
-          let oldPhantom = INITIAL_STAKE_MULTIPLE*previousStakeAmount;
+          let expectedNewPhantom = (expectedReward + INITIAL_STAKE_MULTIPLE * previousStakeAmount) * newStakeAmount / previousStakeAmount;
+          let oldPhantom = INITIAL_STAKE_MULTIPLE * previousStakeAmount;
           let expectedPhantom = oldPhantom + expectedNewPhantom;
           expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(expectedPhantom);
           expect(await this.pool.totalPhantom()).to.be.equal(expectedPhantom);
@@ -347,7 +347,7 @@ describe("Pool", function () {
           await this.pool.setBlockNumber(newBlockNumber);
           await this.pool.connect(userB).stake(newStakeAmount);
 
-          let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+          let expectedReward = (newBlockNumber - lastRewardBlock) * REWARD_PER_BLOCK;
           expect(await this.pool.totalRewarded()).to.be.equal(expectedReward);
           expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
           expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(0);
@@ -356,8 +356,8 @@ describe("Pool", function () {
           expect(await this.pool.balanceOfStaked(addrUserB)).to.be.equal(newStakeAmount);
           expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
           expect(await this.pool.totalStaked()).to.be.equal(totalStakeAmount);
-          let expectedNewPhantom = (expectedReward + INITIAL_STAKE_MULTIPLE*previousStakeAmount)*newStakeAmount/previousStakeAmount;
-          let oldPhantom = INITIAL_STAKE_MULTIPLE*previousStakeAmount;
+          let expectedNewPhantom = (expectedReward + INITIAL_STAKE_MULTIPLE * previousStakeAmount) * newStakeAmount / previousStakeAmount;
+          let oldPhantom = INITIAL_STAKE_MULTIPLE * previousStakeAmount;
           let expectedPhantom = oldPhantom + expectedNewPhantom;
           expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(oldPhantom);
           expect(await this.pool.balanceOfPhantom(addrUserB)).to.be.equal(expectedNewPhantom);
@@ -382,8 +382,8 @@ describe("Pool", function () {
     });
 
     describe('during lockup period', function () {
-      it('should not be able to unstake', async function() {
-        await this.pool.setBlockTimestamp(initialTimestamp+(86400*STAKE_LOCKUP_DURATION-1)); //during lockup period
+      it('should not be able to unstake', async function () {
+        await this.pool.setBlockTimestamp(initialTimestamp + (86400 * STAKE_LOCKUP_DURATION - 1)); //during lockup period
         expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
         await expect(this.pool.connect(userA).unstake(stakeAmount)).to.be.revertedWith("insufficient unstakable balance");
       });
@@ -391,10 +391,10 @@ describe("Pool", function () {
 
     describe('after lockup period', function () {
       beforeEach('advance after lockup', async function () {
-        await this.pool.setBlockTimestamp(initialTimestamp+(86400*STAKE_LOCKUP_DURATION)); //after lockup period
+        await this.pool.setBlockTimestamp(initialTimestamp + (86400 * STAKE_LOCKUP_DURATION)); //after lockup period
       });
 
-      it('should be able to unstake', async function() {
+      it('should be able to unstake', async function () {
         expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(stakeAmount);
         await expect(this.pool.connect(userA).unstake(stakeAmount)).to.not.be.reverted;
       });
@@ -406,30 +406,30 @@ describe("Pool", function () {
 
       it('should emit the Unstake event with correct amount', async function () {
         await expect(this.pool.connect(userA).unstake(stakeAmount))
-        .to.emit(this.pool, 'Unstake')
-        .withArgs(await userA.getAddress(), stakeAmount);
+          .to.emit(this.pool, 'Unstake')
+          .withArgs(await userA.getAddress(), stakeAmount);
       });
 
       it('unstake half of the staked amount and should have the correct states', async function () {
         const newBlockNumber = 10;
 
         await this.pool.setBlockNumber(newBlockNumber);
-        await this.pool.connect(userA).unstake(stakeAmount/2);
+        await this.pool.connect(userA).unstake(stakeAmount / 2);
 
-        expect(await this.univ2.balanceOf(addrUserA)).to.be.equal(stakeAmount/2);
-        expect(await this.pool.totalRewarded()).to.be.equal(REWARD_PER_BLOCK*(newBlockNumber-initialBlockNumber)/2);
+        expect(await this.univ2.balanceOf(addrUserA)).to.be.equal(stakeAmount / 2);
+        expect(await this.pool.totalRewarded()).to.be.equal(REWARD_PER_BLOCK * (newBlockNumber - initialBlockNumber) / 2);
         expect(await this.pool.lastRewardBlock()).to.be.equal(newBlockNumber);
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
-        expect(await this.pool.balanceOfVesting(addrUserA)).to.equal(REWARD_PER_BLOCK*(newBlockNumber-initialBlockNumber)/2);
-        expect(await this.pool.totalVesting()).to.equal(REWARD_PER_BLOCK*(newBlockNumber-initialBlockNumber)/2);
-        expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(stakeAmount/2);
-        expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(stakeAmount/2);
-        expect(await this.pool.totalStaked()).to.be.equal(stakeAmount/2);
-        expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE*(stakeAmount/2));
-        expect(await this.pool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE*(stakeAmount/2));
+        expect(await this.pool.balanceOfVesting(addrUserA)).to.equal(REWARD_PER_BLOCK * (newBlockNumber - initialBlockNumber) / 2);
+        expect(await this.pool.totalVesting()).to.equal(REWARD_PER_BLOCK * (newBlockNumber - initialBlockNumber) / 2);
+        expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(stakeAmount / 2);
+        expect(await this.pool.balanceOfUnstakable(addrUserA)).to.be.equal(stakeAmount / 2);
+        expect(await this.pool.totalStaked()).to.be.equal(stakeAmount / 2);
+        expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE * (stakeAmount / 2));
+        expect(await this.pool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE * (stakeAmount / 2));
       });
 
-      it('stake more but can only unstake the initial unlocked amount', async function() {
+      it('stake more but can only unstake the initial unlocked amount', async function () {
         const newStakeAmount = 20;
         const previousStakeAmount = stakeAmount;
         let totalStakeAmount = stakeAmount + newStakeAmount;
@@ -448,7 +448,7 @@ describe("Pool", function () {
     const initialTimestamp = 1598400000;
     const stakeAmount = 10;
 
-    beforeEach('set initial block number and userA stakes 10 univ2', async function() {
+    beforeEach('set initial block number and userA stakes 10 univ2', async function () {
       await this.pool.setBlockNumber(initialBlockNumber);
       await this.univ2.connect(owner).transfer(addrUserA, 20);
       await this.univ2.connect(userA).approve(this.pool.address, 20);
@@ -457,18 +457,18 @@ describe("Pool", function () {
       await this.pool.connect(userA).stake(stakeAmount);
     });
 
-    describe('With no vesting duration', function() {
+    describe('With no vesting duration', function () {
       beforeEach('set vesting duration to 0', async function () {
         await this.pool.setVestingDuration(0);
       });
 
-      it('all the rewards should be claimable right after harvest', async function() {
+      it('all the rewards should be claimable right after harvest', async function () {
         const newBlockNumber = 60;
         const newStakeAmount = 5;
         await this.pool.setBlockNumber(newBlockNumber);
         await this.pool.connect(userA).stake(newStakeAmount);
 
-        let expectedReward = (newBlockNumber-initialBlockNumber)*REWARD_PER_BLOCK;
+        let expectedReward = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK;
         expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
         await this.pool.setBlockTimestamp(initialTimestamp);
@@ -478,15 +478,15 @@ describe("Pool", function () {
       });
     });
 
-    describe('With vesting duration', function() {
-      describe('With no reward', async function() {
-        it('harvest should be reverted when total reward is 0' , async function() {
+    describe('With vesting duration', function () {
+      describe('With no reward', async function () {
+        it('harvest should be reverted when total reward is 0', async function () {
           expect(await this.pool.totalRewarded()).to.be.equal(0);
           expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(0);
           await expect(this.pool.connect(userA).harvest(5)).to.be.revertedWith("insufficient total rewarded");
         });
 
-        it('harvest should be reverted when no reward for given user' , async function() {
+        it('harvest should be reverted when no reward for given user', async function () {
           const newBlockNumber = 10;
           // user B stakes 20 at block number 10
           await this.univ2.connect(owner).transfer(addrUserB, 20);
@@ -494,7 +494,7 @@ describe("Pool", function () {
           await this.pool.setBlockNumber(newBlockNumber);
           await this.pool.connect(userB).stake(20);
 
-          let expectedReward = (newBlockNumber - initialBlockNumber)*REWARD_PER_BLOCK;
+          let expectedReward = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK;
           expect(await this.pool.totalRewarded()).to.be.equal(expectedReward);
           expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
           expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(0);
@@ -503,11 +503,11 @@ describe("Pool", function () {
         });
       });
 
-      describe('With reward', async function() {
+      describe('With reward', async function () {
         const newBlockNumber = 60;
         const newStakeAmount = 5;
 
-        beforeEach('userA stakes 5 at block number 10', async function() {
+        beforeEach('userA stakes 5 at block number 10', async function () {
           await this.pool.setBlockNumber(newBlockNumber);
           await this.pool.connect(userA).stake(newStakeAmount);
         });
@@ -517,8 +517,8 @@ describe("Pool", function () {
           await expect(this.pool.connect(userA).harvest(0)).to.be.revertedWith("zero harvest amount");
         });
 
-        it('should be able to harvest and the user state and total state should be updated' , async function() {
-          let expectedReward = (newBlockNumber-initialBlockNumber)*REWARD_PER_BLOCK;
+        it('should be able to harvest and the user state and total state should be updated', async function () {
+          let expectedReward = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK;
           let totalStakeAmount = stakeAmount + newStakeAmount;
           expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
@@ -534,7 +534,7 @@ describe("Pool", function () {
           expect(await this.pool.totalVesting()).to.be.equal(harvestAmount);
           expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(totalStakeAmount);
           expect(await this.pool.totalStaked()).to.be.equal(totalStakeAmount);
-          let expectedPhantom = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK / 2 + harvestAmount + INITIAL_STAKE_MULTIPLE*15;
+          let expectedPhantom = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK / 2 + harvestAmount + INITIAL_STAKE_MULTIPLE * 15;
           expect(await this.pool.balanceOfPhantom(addrUserA)).to.be.equal(expectedPhantom);
           expect(await this.pool.totalPhantom()).to.be.equal(expectedPhantom);
 
@@ -542,16 +542,16 @@ describe("Pool", function () {
           expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
 
           await this.pool.setBlockTimestamp(1600992000); // 1598400000+(86400*30) after 1 months
-          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount/6);
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount / 6);
 
           await this.pool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) after 3 months
-          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount/2);
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount / 2);
 
           await this.pool.setBlockTimestamp(1613952000); // 1598400000+(86400*180) after 6 months
           expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount);
         });
 
-        it('should emit Harvest event with correct amount', async function() {
+        it('should emit Harvest event with correct amount', async function () {
           await expect(this.pool.connect(userA).harvest(5))
             .to.emit(this.pool, 'Harvest')
             .withArgs(await userA.getAddress(), 5);
@@ -565,12 +565,12 @@ describe("Pool", function () {
     const initialTimestamp = 1598400000;
     const initialHarvestAmount = 60;
 
-    describe('With no vesting duration', function() {
+    describe('With no vesting duration', function () {
       beforeEach('set vesting duration to 0', async function () {
         await this.pool.setVestingDuration(0);
       });
 
-      it('should be able to claim all the rewards right after harvest', async function() {
+      it('should be able to claim all the rewards right after harvest', async function () {
         await this.pool.setBlockNumber(initialBlockNumber);
         await this.univ2.connect(owner).transfer(addrUserA, 20);
         await this.univ2.connect(userA).approve(this.pool.address, 20);
@@ -585,7 +585,7 @@ describe("Pool", function () {
         newBlockNumber = 61;
         await this.pool.setBlockNumber(newBlockNumber);
         await this.pool.connect(userA).stake(5);
-        let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+        let expectedReward = (newBlockNumber - lastRewardBlock) * REWARD_PER_BLOCK;
         expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
         await this.pool.setBlockTimestamp(initialTimestamp);
@@ -599,8 +599,8 @@ describe("Pool", function () {
       });
     });
 
-    describe('With normal vesting duration', function() {
-      beforeEach('userA stakes to get rewards and harvests half rewards', async function() {
+    describe('With normal vesting duration', function () {
+      beforeEach('userA stakes to get rewards and harvests half rewards', async function () {
         await this.pool.setBlockNumber(initialBlockNumber);
         await this.univ2.connect(owner).transfer(addrUserA, 20);
         await this.univ2.connect(userA).approve(this.pool.address, 20);
@@ -615,48 +615,48 @@ describe("Pool", function () {
         newBlockNumber = 61;
         await this.pool.setBlockNumber(newBlockNumber);
         await this.pool.connect(userA).stake(5);
-        let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+        let expectedReward = (newBlockNumber - lastRewardBlock) * REWARD_PER_BLOCK;
         expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
         await this.pool.setBlockTimestamp(initialTimestamp);
         await this.pool.connect(userA).harvest(initialHarvestAmount);
 
-        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward-initialHarvestAmount);
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward - initialHarvestAmount);
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
         expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount);
       });
 
-      describe('during vesting period', function() {
+      describe('during vesting period', function () {
         beforeEach('advance after half of the vesting schedule', async function () {
           await this.pool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) => after 3 months
         });
 
         it('should be able to claim the the vested amount', async function () {
-          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount/2);
-          await expect(this.pool.connect(userA).claim(initialHarvestAmount/2)).to.not.be.reverted;
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount / 2);
+          await expect(this.pool.connect(userA).claim(initialHarvestAmount / 2)).to.not.be.reverted;
         });
 
-        it('should get reverted if tries to claim the amount more than the claimable', async function() {
-          await expect(this.pool.connect(userA).claim(initialHarvestAmount/2 + 5)).to.be.revertedWith("insufficient claimable balance");
+        it('should get reverted if tries to claim the amount more than the claimable', async function () {
+          await expect(this.pool.connect(userA).claim(initialHarvestAmount / 2 + 5)).to.be.revertedWith("insufficient claimable balance");
         });
 
-        it('the balance of claimable for userA should be updated correctly and userA can claim part of the claimable' , async function() {
-          let claimable = initialHarvestAmount/2;
+        it('the balance of claimable for userA should be updated correctly and userA can claim part of the claimable', async function () {
+          let claimable = initialHarvestAmount / 2;
           expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(claimable);
 
-          let claimed = claimable/2;
+          let claimed = claimable / 2;
           await this.pool.connect(userA).claim(claimed);
-          let remainingClaimable = claimable-claimed;
+          let remainingClaimable = claimable - claimed;
           expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
 
           let remainingReward = await this.pool.balanceOfRewarded(addrUserA);
-          let harvestAmount = remainingReward/1;
+          let harvestAmount = remainingReward / 1;
           await this.pool.connect(userA).harvest(harvestAmount);
           expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
-          expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount+harvestAmount);
+          expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount + harvestAmount);
 
           await this.pool.setBlockTimestamp(1613952000); // 1598400000+(86400*180) => after 6 months for the inital harvest and after 3 months for the second harvest
-          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount+(harvestAmount/2)-claimed);
+          expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount + (harvestAmount / 2) - claimed);
         });
       });
 
@@ -675,7 +675,7 @@ describe("Pool", function () {
           await expect(this.pool.connect(userA).claim(0)).to.be.revertedWith("zero claim amount");
         });
 
-        it('Claim event should be emitted correctly', async function() {
+        it('Claim event should be emitted correctly', async function () {
           await expect(this.pool.connect(userA).claim(initialHarvestAmount))
             .to.emit(this.pool, 'Claim')
             .withArgs(await userA.getAddress(), initialHarvestAmount);
@@ -689,13 +689,13 @@ describe("Pool", function () {
     const initialTimestamp = 1598400000;
     const initialHarvestAmount = 60;
 
-    beforeEach('userA stakes to get rewards and harvests half rewards', async function() {
+    beforeEach('userA stakes to get rewards and harvests half rewards', async function () {
       await this.pool.setBlockNumber(initialBlockNumber);
       await this.univ2.connect(owner).transfer(addrUserA, 20);
       await this.univ2.connect(userA).approve(this.pool.address, 20);
 
       await this.weth.mint(addrUserA, '1000000000000000000000');
-      await this.weth.connect(userA).approve(this.pool.address,'1000000000000000000000');
+      await this.weth.connect(userA).approve(this.pool.address, '1000000000000000000000');
 
       // user A stakes 10 at block number 1
       let newBlockNumber = 1;
@@ -707,37 +707,37 @@ describe("Pool", function () {
       newBlockNumber = 61;
       await this.pool.setBlockNumber(newBlockNumber);
       await this.pool.connect(userA).stake(5);
-      let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+      let expectedReward = (newBlockNumber - lastRewardBlock) * REWARD_PER_BLOCK;
       expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
       await this.pool.setBlockTimestamp(initialTimestamp);
       await this.pool.connect(userA).harvest(initialHarvestAmount);
 
-      expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward-initialHarvestAmount);
+      expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward - initialHarvestAmount);
       expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(0);
       expect(await this.pool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount);
     });
 
-    describe('during vesting period', function() {
+    describe('during vesting period', function () {
       beforeEach('advance after half of the vesting schedule', async function () {
         await this.pool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) => after 3 months
       });
 
       it('should be able to zap the the vested amount', async function () {
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount/2);
-        await this.pool.connect(userA).zapLP(initialHarvestAmount/2)
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount / 2);
+        await this.pool.connect(userA).zapLP(initialHarvestAmount / 2)
       });
 
       it('Cap limit', async function () {
         await poolInstance.connect(owner).setTotalPoolCapLimit(1);
-        await expect(poolInstance.connect(userA).zapLP(initialHarvestAmount/2)).to.be.revertedWith('The amount to be staked will exceed pool limit');
+        await expect(poolInstance.connect(userA).zapLP(initialHarvestAmount / 2)).to.be.revertedWith('The amount to be staked will exceed pool limit');
 
         await poolInstance.connect(owner).setTotalPoolCapLimit(initialHarvestAmount * 2);
         await poolInstance.connect(owner).setStakeLimitPerAddress(1);
-        await expect(poolInstance.connect(userA).zapLP(initialHarvestAmount/2)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
+        await expect(poolInstance.connect(userA).zapLP(initialHarvestAmount / 2)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
 
         await poolInstance.connect(owner).setStakeLimitPerAddress(initialHarvestAmount * 2);
-        await this.pool.connect(userA).zapLP(initialHarvestAmount/2);
+        await this.pool.connect(userA).zapLP(initialHarvestAmount / 2);
       });
 
       it('should not be able to zap zero or negative amount', async function () {
@@ -745,26 +745,26 @@ describe("Pool", function () {
         await expect(this.pool.connect(userA).zapLP(0)).to.be.revertedWith("zero zap amount");
       });
 
-      it('should get reverted if tries to zap the amount more than the claimable', async function() {
-        await expect(this.pool.connect(userA).zapLP(initialHarvestAmount/2 + 5)).to.be.revertedWith("insufficient claimable balance");
+      it('should get reverted if tries to zap the amount more than the claimable', async function () {
+        await expect(this.pool.connect(userA).zapLP(initialHarvestAmount / 2 + 5)).to.be.revertedWith("insufficient claimable balance");
       });
 
-      it('the balance of claimable for userA should be updated correctly and userA can zap part of the claimable' , async function() {
+      it('the balance of claimable for userA should be updated correctly and userA can zap part of the claimable', async function () {
         let previousStakeAmount = await this.pool.balanceOfStaked(addrUserA);
-        let claimable = initialHarvestAmount/2;
+        let claimable = initialHarvestAmount / 2;
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(claimable);
 
-        let zapCookAmount = claimable/2;
+        let zapCookAmount = claimable / 2;
         await this.pool.connect(userA).zapLP(zapCookAmount);
-        let remainingClaimable = claimable-zapCookAmount;
+        let remainingClaimable = claimable - zapCookAmount;
         let expectedNewUniv2 = zapCookAmount;
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
         expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(zapCookAmount);
         expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(previousStakeAmount.add(expectedNewUniv2));
       });
 
-      it('Zap event should be emitted correctly', async function() {
-        let zapCookAmount = initialHarvestAmount/2;
+      it('Zap event should be emitted correctly', async function () {
+        let zapCookAmount = initialHarvestAmount / 2;
         let expectedWethAmount = zapCookAmount;
         let expectedUniv2Amount = zapCookAmount;
         await expect(this.pool.connect(userA).zapLP(zapCookAmount))
@@ -773,16 +773,16 @@ describe("Pool", function () {
       });
     });
 
-    describe('during vesting period', function() {
+    describe('during vesting period', function () {
 
       beforeEach('advance after half of the vesting schedule', async function () {
         await this.pool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) => after 3 months
       });
 
       it('should be able to zap the vested amount with ETH', async function () {
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount/2);
-        let overrides = {value: ethers.utils.parseEther('0.00000000000000003'), gasLimit: 600000}
-        await this.pool.connect(userA).zapLPWithEth(initialHarvestAmount/2, overrides);
+        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount / 2);
+        let overrides = { value: ethers.utils.parseEther('0.00000000000000003'), gasLimit: 600000 }
+        await this.pool.connect(userA).zapLPWithEth(initialHarvestAmount / 2, overrides);
       });
 
       it('should not be able to zap zero or negative amount with ETH', async function () {
@@ -790,27 +790,27 @@ describe("Pool", function () {
         await expect(this.pool.connect(userA).zapLPWithEth(0)).to.be.revertedWith("zero zap amount");
       });
 
-      it('should get reverted if tries to zap the cook amount with ETH more than the claimable', async function() {
-        let overrides = {value: ethers.utils.parseEther('0.0000000000000003'), gasLimit: 600000}
-        await expect(this.pool.connect(userA).zapLPWithEth(initialHarvestAmount/2 + 5000000000000000)).to.be.revertedWith("insufficient claimable balance");
+      it('should get reverted if tries to zap the cook amount with ETH more than the claimable', async function () {
+        let overrides = { value: ethers.utils.parseEther('0.0000000000000003'), gasLimit: 600000 }
+        await expect(this.pool.connect(userA).zapLPWithEth(initialHarvestAmount / 2 + 5000000000000000)).to.be.revertedWith("insufficient claimable balance");
       });
 
-      it('the balance of claimable for userA should be updated correctly and userA can zap part of the claimable' , async function() {
+      it('the balance of claimable for userA should be updated correctly and userA can zap part of the claimable', async function () {
         let previousStakeAmount = await this.pool.balanceOfStaked(addrUserA);
-        let claimable = initialHarvestAmount/2;
+        let claimable = initialHarvestAmount / 2;
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(claimable);
 
-        let zapCookAmount = claimable/2;
+        let zapCookAmount = claimable / 2;
         await this.pool.connect(userA).zapLP(zapCookAmount);
-        let remainingClaimable = claimable-zapCookAmount;
+        let remainingClaimable = claimable - zapCookAmount;
         let expectedNewUniv2 = zapCookAmount;
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
         expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(zapCookAmount);
         expect(await this.pool.balanceOfStaked(addrUserA)).to.be.equal(previousStakeAmount.add(expectedNewUniv2));
       });
 
-      it('Zap event should be emitted correctly', async function() {
-        let zapCookAmount = initialHarvestAmount/2;
+      it('Zap event should be emitted correctly', async function () {
+        let zapCookAmount = initialHarvestAmount / 2;
         let expectedWethAmount = zapCookAmount;
         let expectedUniv2Amount = zapCookAmount;
         await expect(this.pool.connect(userA).zapLP(zapCookAmount))

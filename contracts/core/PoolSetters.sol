@@ -15,7 +15,9 @@ contract PoolSetters is PoolState, PoolGetters {
         _state.balance.rewarded = _state.balance.rewarded.add(amount);
     }
 
-    function decrementTotalRewarded(uint256 amount, string memory reason) internal {
+    function decrementTotalRewarded(uint256 amount, string memory reason)
+        internal
+    {
         _state.balance.rewarded = _state.balance.rewarded.sub(amount, reason);
     }
 
@@ -26,52 +28,80 @@ contract PoolSetters is PoolState, PoolGetters {
     /**
      * Account
      */
-    function incrementBalanceOfStaked(address account, uint256 amount) internal {
-        _state.accounts[account].staked = _state.accounts[account].staked.add(amount);
+    function incrementBalanceOfStaked(address account, uint256 amount)
+        internal
+    {
+        _state.accounts[account].staked = _state.accounts[account].staked.add(
+            amount
+        );
         _state.balance.staked = _state.balance.staked.add(amount);
 
-        Vesting memory staking = Vesting(
-                blockTimestamp(),
-                amount);
+        Vesting memory staking = Vesting(blockTimestamp(), amount);
         _state.accounts[account].stakings.push(staking);
     }
 
-    function decrementBalanceOfStaked(address account, uint256 amount, string memory reason) internal {
-        _state.accounts[account].staked = _state.accounts[account].staked.sub(amount, reason);
+    function decrementBalanceOfStaked(
+        address account,
+        uint256 amount,
+        string memory reason
+    ) internal {
+        _state.accounts[account].staked = _state.accounts[account].staked.sub(
+            amount,
+            reason
+        );
         _state.balance.staked = _state.balance.staked.sub(amount, reason);
 
         uint256 remainingAmount = amount;
-        for (uint i = 0 ; i < _state.accounts[account].stakings.length ; i++) {
+        for (uint256 i = 0; i < _state.accounts[account].stakings.length; i++) {
             if (remainingAmount == 0) {
                 break;
             }
-            uint256 totalStakingAmount = _state.accounts[account].stakings[i].amount;
+            uint256 totalStakingAmount =
+                _state.accounts[account].stakings[i].amount;
 
-            uint256 unstakeAmount = totalStakingAmount > remainingAmount ? remainingAmount : totalStakingAmount;
-            _state.accounts[account].stakings[i].amount = totalStakingAmount - unstakeAmount;
+            uint256 unstakeAmount =
+                totalStakingAmount > remainingAmount
+                    ? remainingAmount
+                    : totalStakingAmount;
+            _state.accounts[account].stakings[i].amount =
+                totalStakingAmount -
+                unstakeAmount;
             remainingAmount -= unstakeAmount;
         }
     }
 
-    function incrementBalanceOfPhantom(address account, uint256 amount) internal {
-        _state.accounts[account].phantom = _state.accounts[account].phantom.add(amount);
+    function incrementBalanceOfPhantom(address account, uint256 amount)
+        internal
+    {
+        _state.accounts[account].phantom = _state.accounts[account].phantom.add(
+            amount
+        );
         _state.balance.phantom = _state.balance.phantom.add(amount);
     }
 
-    function decrementBalanceOfPhantom(address account, uint256 amount, string memory reason) internal {
-        _state.accounts[account].phantom = _state.accounts[account].phantom.sub(amount, reason);
+    function decrementBalanceOfPhantom(
+        address account,
+        uint256 amount,
+        string memory reason
+    ) internal {
+        _state.accounts[account].phantom = _state.accounts[account].phantom.sub(
+            amount,
+            reason
+        );
         _state.balance.phantom = _state.balance.phantom.sub(amount, reason);
     }
 
-    function incrementBalanceOfClaimed(address account, uint256 amount) internal {
-        _state.accounts[account].claimed = _state.accounts[account].claimed.add(amount);
+    function incrementBalanceOfClaimed(address account, uint256 amount)
+        internal
+    {
+        _state.accounts[account].claimed = _state.accounts[account].claimed.add(
+            amount
+        );
         _state.balance.claimed = _state.balance.claimed.add(amount);
     }
 
     function addToVestingSchdule(address account, uint256 amount) internal {
-        Vesting memory vesting = Vesting(
-                blockTimestamp(),
-                amount);
+        Vesting memory vesting = Vesting(blockTimestamp(), amount);
         _state.accounts[account].vestings.push(vesting);
         _state.balance.vesting = _state.balance.vesting.add(amount);
     }
@@ -79,37 +109,39 @@ contract PoolSetters is PoolState, PoolGetters {
     // Admin Functions
     // Put an evil address into blacklist
     function blacklistAddress(address addr) public onlyOwner {
-      _state.isBlacklisted[addr] = true;
+        _state.isBlacklisted[addr] = true;
     }
 
     //Remove an address from blacklist
     function removeAddressFromBlacklist(address addr) public onlyOwner {
-      _state.isBlacklisted[addr] = false;
+        _state.isBlacklisted[addr] = false;
     }
 
     // Pause all liquidity mining program
     function pauseMinigReward() public onlyOwner {
-      _state.pauseMinig = true;
-      _state.REWARD_PER_BLOCK = 0;
+        _state.pauseMinig = true;
+        _state.REWARD_PER_BLOCK = 0;
     }
 
     // resume liquidity mining program
     function resumeMiningReward(uint256 rewardPerBlock) public onlyOwner {
-      _state.pauseMinig = false;
-      _state.REWARD_PER_BLOCK = rewardPerBlock;
+        _state.pauseMinig = false;
+        _state.REWARD_PER_BLOCK = rewardPerBlock;
     }
 
     // set cook token reward per block
     function setRewardPerBlock(uint256 rewardPerBlock) public onlyOwner {
-      _state.REWARD_PER_BLOCK = rewardPerBlock;
+        _state.REWARD_PER_BLOCK = rewardPerBlock;
     }
 
     function setTotalPoolCapLimit(uint256 totalPoolCapLimit) public onlyOwner {
-      _state.totalPoolCapLimit = totalPoolCapLimit;
+        _state.totalPoolCapLimit = totalPoolCapLimit;
     }
 
-    function setStakeLimitPerAddress(uint256 stakeLimitPerAddress) public onlyOwner {
-      _state.stakeLimitPerAddress = stakeLimitPerAddress;
+    function setStakeLimitPerAddress(uint256 stakeLimitPerAddress)
+        public
+        onlyOwner
+    {
+        _state.stakeLimitPerAddress = stakeLimitPerAddress;
     }
-
 }

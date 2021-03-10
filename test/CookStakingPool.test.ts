@@ -5,18 +5,18 @@ import { solidity } from "ethereum-waffle";
 
 import { MockCOOK } from "../typechain/MockCOOK";
 import { MockPool } from "../typechain/MockPool";
-import { MockCookPool} from "../typechain/MockCookPool";
+import { MockCookPool } from "../typechain/MockCookPool";
 
 chai.use(solidity);
 
 const { expect } = chai;
 
-const getAddress = async(signer:Signer) => {
+const getAddress = async (signer: Signer) => {
   return await signer.getAddress();
 }
 
-async function latest (addtime:number = 0) {
-  const block = await ethers.provider.send("eth_getBlockByNumber",['latest',false]);
+async function latest(addtime: number = 0) {
+  const block = await ethers.provider.send("eth_getBlockByNumber", ['latest', false]);
   return ethers.BigNumber.from(block.timestamp).add(addtime);
 }
 
@@ -26,19 +26,19 @@ const STAKE_LOCKUP_DURATION = 10;
 const VESTING_DURATION = 180;
 
 describe("CookPool", function () {
-  let cookInstance : MockCOOK;
-  let cookPoolInstance : MockCookPool;
+  let cookInstance: MockCOOK;
+  let cookPoolInstance: MockCookPool;
 
-  let owner : Signer;
-  let userA : Signer;
-  let userB : Signer;
+  let owner: Signer;
+  let userA: Signer;
+  let userB: Signer;
 
-  let addrUserA : Promise<string>;
-  let addrUserB : Promise<string>;
+  let addrUserA: Promise<string>;
+  let addrUserB: Promise<string>;
 
   beforeEach(async function () {
-    [ owner, userA, userB ] = await ethers.getSigners();
-    [ addrUserA, addrUserB ] = [ userA, userB ].map(signer => {
+    [owner, userA, userB] = await ethers.getSigners();
+    [addrUserA, addrUserB] = [userA, userB].map(signer => {
       return getAddress(signer)
     })
 
@@ -48,7 +48,7 @@ describe("CookPool", function () {
     );
     cookInstance = (await cookFactory.deploy("1000000000000000000000000")) as MockCOOK;
     this.cook = await cookInstance.deployed();
-    this.cook.connect(owner).mint(await owner.getAddress(),'10000000000000000000000');
+    this.cook.connect(owner).mint(await owner.getAddress(), '10000000000000000000000');
 
     const cookPpoolFactory = await ethers.getContractFactory(
       "MockCookPool",
@@ -59,7 +59,7 @@ describe("CookPool", function () {
     this.cookPool = await cookPoolInstance.deployed();
     this.cookPool.setBlockNumber(0);
 
-    this.cook.connect(owner).mint(await cookPoolInstance.address,'1000000000000000000000000');
+    this.cook.connect(owner).mint(await cookPoolInstance.address, '1000000000000000000000000');
   });
 
   describe('Init', function () {
@@ -146,8 +146,8 @@ describe("CookPool", function () {
         expect(await cookPoolInstance.connect(owner).removeAddressFromBlacklist(await userB.getAddress()));
 
         await expect(this.cookPool.connect(userB).stake(10))
-        .to.emit(this.cookPool, 'Stake')
-        .withArgs(await userB.getAddress(), 10);
+          .to.emit(this.cookPool, 'Stake')
+          .withArgs(await userB.getAddress(), 10);
       })
 
       it('Emergent withdraw', async function () {
@@ -158,7 +158,7 @@ describe("CookPool", function () {
 
     });
 
-    describe('Without approve', function() {
+    describe('Without approve', function () {
       beforeEach('set initial block number and userA has 20 cook', async function () {
         await this.cookPool.setBlockNumber(initialBlockNumber);
         expect(await this.cookPool.blockNumberE()).to.be.equal(initialBlockNumber);
@@ -173,7 +173,7 @@ describe("CookPool", function () {
       });
     });
 
-    describe('With approve', function() {
+    describe('With approve', function () {
       beforeEach('set initial block number and userA approves 20 cook', async function () {
         await this.cookPool.setBlockNumber(initialBlockNumber);
         expect(await this.cookPool.blockNumberE()).to.be.equal(initialBlockNumber);
@@ -198,8 +198,8 @@ describe("CookPool", function () {
 
         await cookPoolInstance.connect(owner).setStakeLimitPerAddress(100);
         await expect(this.cookPool.connect(userA).stake(10))
-        .to.emit(this.cookPool, 'Stake')
-        .withArgs(await userA.getAddress(), 10);
+          .to.emit(this.cookPool, 'Stake')
+          .withArgs(await userA.getAddress(), 10);
       })
 
       it('should not be able to stake zero or negative amount', async function () {
@@ -207,13 +207,13 @@ describe("CookPool", function () {
         await expect(this.cookPool.connect(userA).stake(0)).to.be.revertedWith("zero stake cook amount");
       });
 
-      it('should emit Stake event with correct amount', async function() {
+      it('should emit Stake event with correct amount', async function () {
         await expect(this.cookPool.connect(userA).stake(10))
-        .to.emit(this.cookPool, 'Stake')
-        .withArgs(await userA.getAddress(), 10);
+          .to.emit(this.cookPool, 'Stake')
+          .withArgs(await userA.getAddress(), 10);
       });
 
-      describe('With no lockup', function() {
+      describe('With no lockup', function () {
         const stakeAmount = 10;
         const newBlockNumber = 1;
 
@@ -233,12 +233,12 @@ describe("CookPool", function () {
           expect(await this.cookPool.lastRewardBlock()).to.be.equal(newBlockNumber);
           expect(await this.cookPool.balanceOfStaked(addrUserA)).to.be.equal(stakeAmount);
           expect(await this.cookPool.totalStaked()).to.be.equal(stakeAmount);
-          expect(await this.cookPool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE*stakeAmount);
-          expect(await this.cookPool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE*stakeAmount);
+          expect(await this.cookPool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE * stakeAmount);
+          expect(await this.cookPool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE * stakeAmount);
         });
       });
 
-      describe('With stake lockup', function() {
+      describe('With stake lockup', function () {
         const stakeAmount = 10;
         const initialTimestamp = 1598400000;
         const lastRewardBlock = initialBlockNumber;
@@ -259,12 +259,12 @@ describe("CookPool", function () {
           expect(await this.cookPool.lastRewardBlock()).to.be.equal(lastRewardBlock);
           expect(await this.cookPool.balanceOfStaked(addrUserA)).to.be.equal(stakeAmount);
           expect(await this.cookPool.totalStaked()).to.be.equal(stakeAmount);
-          expect(await this.cookPool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE*stakeAmount);
-          expect(await this.cookPool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE*stakeAmount);
+          expect(await this.cookPool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE * stakeAmount);
+          expect(await this.cookPool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE * stakeAmount);
         });
 
         it('should be unlocked after lockup duration', async function () {
-          await this.cookPool.setBlockTimestamp(initialTimestamp + (86400 * STAKE_LOCKUP_DURATION-1)); //before lockup period
+          await this.cookPool.setBlockTimestamp(initialTimestamp + (86400 * STAKE_LOCKUP_DURATION - 1)); //before lockup period
           expect(await this.cookPool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
 
           await this.cookPool.setBlockTimestamp(initialTimestamp + (86400 * STAKE_LOCKUP_DURATION)); //after lockup period
@@ -279,15 +279,15 @@ describe("CookPool", function () {
           await this.cookPool.setBlockNumber(newBlockNumber);
           await this.cookPool.connect(userA).stake(newStakeAmount);
 
-          let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+          let expectedReward = (newBlockNumber - lastRewardBlock) * REWARD_PER_BLOCK;
           expect(await this.cookPool.totalRewarded()).to.be.equal(expectedReward);
           expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
           expect(await this.cookPool.lastRewardBlock()).to.be.equal(newBlockNumber);
           expect(await this.cookPool.balanceOfStaked(addrUserA)).to.be.equal(totalStakeAmount);
           expect(await this.cookPool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
           expect(await this.cookPool.totalStaked()).to.be.equal(totalStakeAmount);
-          let expectedNewPhantom = (expectedReward + INITIAL_STAKE_MULTIPLE*previousStakeAmount)*newStakeAmount/previousStakeAmount;
-          let oldPhantom = INITIAL_STAKE_MULTIPLE*previousStakeAmount;
+          let expectedNewPhantom = (expectedReward + INITIAL_STAKE_MULTIPLE * previousStakeAmount) * newStakeAmount / previousStakeAmount;
+          let oldPhantom = INITIAL_STAKE_MULTIPLE * previousStakeAmount;
           let expectedPhantom = oldPhantom + expectedNewPhantom;
           expect(await this.cookPool.balanceOfPhantom(addrUserA)).to.be.equal(expectedPhantom);
           expect(await this.cookPool.totalPhantom()).to.be.equal(expectedPhantom);
@@ -301,7 +301,7 @@ describe("CookPool", function () {
           await this.cookPool.setBlockNumber(newBlockNumber);
           await this.cookPool.connect(userB).stake(newStakeAmount);
 
-          let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+          let expectedReward = (newBlockNumber - lastRewardBlock) * REWARD_PER_BLOCK;
           expect(await this.cookPool.totalRewarded()).to.be.equal(expectedReward);
           expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
           expect(await this.cookPool.balanceOfRewarded(addrUserB)).to.be.equal(0);
@@ -310,8 +310,8 @@ describe("CookPool", function () {
           expect(await this.cookPool.balanceOfStaked(addrUserB)).to.be.equal(newStakeAmount);
           expect(await this.cookPool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
           expect(await this.cookPool.totalStaked()).to.be.equal(totalStakeAmount);
-          let expectedNewPhantom = (expectedReward + INITIAL_STAKE_MULTIPLE*previousStakeAmount)*newStakeAmount/previousStakeAmount;
-          let oldPhantom = INITIAL_STAKE_MULTIPLE*previousStakeAmount;
+          let expectedNewPhantom = (expectedReward + INITIAL_STAKE_MULTIPLE * previousStakeAmount) * newStakeAmount / previousStakeAmount;
+          let oldPhantom = INITIAL_STAKE_MULTIPLE * previousStakeAmount;
           let expectedPhantom = oldPhantom + expectedNewPhantom;
           expect(await this.cookPool.balanceOfPhantom(addrUserA)).to.be.equal(oldPhantom);
           expect(await this.cookPool.balanceOfPhantom(addrUserB)).to.be.equal(expectedNewPhantom);
@@ -336,8 +336,8 @@ describe("CookPool", function () {
     });
 
     describe('during lockup period', function () {
-      it('should not be able to unstake', async function() {
-        await this.cookPool.setBlockTimestamp(initialTimestamp+(86400*STAKE_LOCKUP_DURATION-1)); //during lockup period
+      it('should not be able to unstake', async function () {
+        await this.cookPool.setBlockTimestamp(initialTimestamp + (86400 * STAKE_LOCKUP_DURATION - 1)); //during lockup period
         expect(await this.cookPool.balanceOfUnstakable(addrUserA)).to.be.equal(0);
         await expect(this.cookPool.connect(userA).unstake(stakeAmount)).to.be.revertedWith("insufficient unstakable balance");
       });
@@ -345,10 +345,10 @@ describe("CookPool", function () {
 
     describe('after lockup period', function () {
       beforeEach('advance after lockup', async function () {
-        await this.cookPool.setBlockTimestamp(initialTimestamp+(86400*STAKE_LOCKUP_DURATION)); //after lockup period
+        await this.cookPool.setBlockTimestamp(initialTimestamp + (86400 * STAKE_LOCKUP_DURATION)); //after lockup period
       });
 
-      it('should be able to unstake', async function() {
+      it('should be able to unstake', async function () {
         expect(await this.cookPool.balanceOfUnstakable(addrUserA)).to.be.equal(stakeAmount);
         await expect(this.cookPool.connect(userA).unstake(stakeAmount)).to.not.be.reverted;
       });
@@ -360,30 +360,30 @@ describe("CookPool", function () {
 
       it('should emit the Unstake event with correct amount', async function () {
         await expect(this.cookPool.connect(userA).unstake(stakeAmount))
-        .to.emit(this.cookPool, 'Unstake')
-        .withArgs(await userA.getAddress(), stakeAmount);
+          .to.emit(this.cookPool, 'Unstake')
+          .withArgs(await userA.getAddress(), stakeAmount);
       });
 
       it('unstake half of the staked amount and should have the correct states', async function () {
         const newBlockNumber = 10;
 
         await this.cookPool.setBlockNumber(newBlockNumber);
-        await this.cookPool.connect(userA).unstake(stakeAmount/2);
+        await this.cookPool.connect(userA).unstake(stakeAmount / 2);
 
-        expect(await this.cook.balanceOf(addrUserA)).to.be.equal(stakeAmount/2);
-        expect(await this.cookPool.totalRewarded()).to.be.equal(REWARD_PER_BLOCK*(newBlockNumber-initialBlockNumber)/2);
+        expect(await this.cook.balanceOf(addrUserA)).to.be.equal(stakeAmount / 2);
+        expect(await this.cookPool.totalRewarded()).to.be.equal(REWARD_PER_BLOCK * (newBlockNumber - initialBlockNumber) / 2);
         expect(await this.cookPool.lastRewardBlock()).to.be.equal(newBlockNumber);
         expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(0);
-        expect(await this.cookPool.balanceOfVesting(addrUserA)).to.equal(REWARD_PER_BLOCK*(newBlockNumber-initialBlockNumber)/2);
-        expect(await this.cookPool.totalVesting()).to.equal(REWARD_PER_BLOCK*(newBlockNumber-initialBlockNumber)/2);
-        expect(await this.cookPool.balanceOfStaked(addrUserA)).to.be.equal(stakeAmount/2);
-        expect(await this.cookPool.balanceOfUnstakable(addrUserA)).to.be.equal(stakeAmount/2);
-        expect(await this.cookPool.totalStaked()).to.be.equal(stakeAmount/2);
-        expect(await this.cookPool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE*(stakeAmount/2));
-        expect(await this.cookPool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE*(stakeAmount/2));
+        expect(await this.cookPool.balanceOfVesting(addrUserA)).to.equal(REWARD_PER_BLOCK * (newBlockNumber - initialBlockNumber) / 2);
+        expect(await this.cookPool.totalVesting()).to.equal(REWARD_PER_BLOCK * (newBlockNumber - initialBlockNumber) / 2);
+        expect(await this.cookPool.balanceOfStaked(addrUserA)).to.be.equal(stakeAmount / 2);
+        expect(await this.cookPool.balanceOfUnstakable(addrUserA)).to.be.equal(stakeAmount / 2);
+        expect(await this.cookPool.totalStaked()).to.be.equal(stakeAmount / 2);
+        expect(await this.cookPool.balanceOfPhantom(addrUserA)).to.be.equal(INITIAL_STAKE_MULTIPLE * (stakeAmount / 2));
+        expect(await this.cookPool.totalPhantom()).to.be.equal(INITIAL_STAKE_MULTIPLE * (stakeAmount / 2));
       });
 
-      it('stake more but can only unstake the initial unlocked amount', async function() {
+      it('stake more but can only unstake the initial unlocked amount', async function () {
         const newStakeAmount = 20;
         const previousStakeAmount = stakeAmount;
         let totalStakeAmount = stakeAmount + newStakeAmount;
@@ -402,7 +402,7 @@ describe("CookPool", function () {
     const initialTimestamp = 1598400000;
     const stakeAmount = 10;
 
-    beforeEach('set initial block number and userA stakes 10 univ2', async function() {
+    beforeEach('set initial block number and userA stakes 10 univ2', async function () {
       await this.cookPool.setBlockNumber(initialBlockNumber);
       await this.cook.connect(owner).transfer(addrUserA, 20);
       await this.cook.connect(userA).approve(this.cookPool.address, 20);
@@ -411,18 +411,18 @@ describe("CookPool", function () {
       await this.cookPool.connect(userA).stake(stakeAmount);
     });
 
-    describe('With no vesting duration', function() {
+    describe('With no vesting duration', function () {
       beforeEach('set vesting duration to 0', async function () {
         await this.cookPool.setVestingDuration(0);
       });
 
-      it('all the rewards should be claimable right after harvest', async function() {
+      it('all the rewards should be claimable right after harvest', async function () {
         const newBlockNumber = 60;
         const newStakeAmount = 5;
         await this.cookPool.setBlockNumber(newBlockNumber);
         await this.cookPool.connect(userA).stake(newStakeAmount);
 
-        let expectedReward = (newBlockNumber-initialBlockNumber)*REWARD_PER_BLOCK;
+        let expectedReward = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK;
         expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
         await this.cookPool.setBlockTimestamp(initialTimestamp);
@@ -432,15 +432,15 @@ describe("CookPool", function () {
       });
     });
 
-    describe('With vesting duration', function() {
-      describe('With no reward', async function() {
-        it('harvest should be reverted when total reward is 0' , async function() {
+    describe('With vesting duration', function () {
+      describe('With no reward', async function () {
+        it('harvest should be reverted when total reward is 0', async function () {
           expect(await this.cookPool.totalRewarded()).to.be.equal(0);
           expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(0);
           await expect(this.cookPool.connect(userA).harvest(5)).to.be.revertedWith("insufficient total rewarded");
         });
 
-        it('harvest should be reverted when no reward for given user' , async function() {
+        it('harvest should be reverted when no reward for given user', async function () {
           const newBlockNumber = 10;
           // user B stakes 20 at block number 10
           await this.cook.connect(owner).transfer(addrUserB, 20);
@@ -448,7 +448,7 @@ describe("CookPool", function () {
           await this.cookPool.setBlockNumber(newBlockNumber);
           await this.cookPool.connect(userB).stake(20);
 
-          let expectedReward = (newBlockNumber - initialBlockNumber)*REWARD_PER_BLOCK;
+          let expectedReward = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK;
           expect(await this.cookPool.totalRewarded()).to.be.equal(expectedReward);
           expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
           expect(await this.cookPool.balanceOfRewarded(addrUserB)).to.be.equal(0);
@@ -457,11 +457,11 @@ describe("CookPool", function () {
         });
       });
 
-      describe('With reward', async function() {
+      describe('With reward', async function () {
         const newBlockNumber = 60;
         const newStakeAmount = 5;
 
-        beforeEach('userA stakes 5 at block number 10', async function() {
+        beforeEach('userA stakes 5 at block number 10', async function () {
           await this.cookPool.setBlockNumber(newBlockNumber);
           await this.cookPool.connect(userA).stake(newStakeAmount);
         });
@@ -471,8 +471,8 @@ describe("CookPool", function () {
           await expect(this.cookPool.connect(userA).harvest(0)).to.be.revertedWith("zero harvest amount");
         });
 
-        it('should be able to harvest and the user state and total state should be updated' , async function() {
-          let expectedReward = (newBlockNumber-initialBlockNumber)*REWARD_PER_BLOCK;
+        it('should be able to harvest and the user state and total state should be updated', async function () {
+          let expectedReward = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK;
           let totalStakeAmount = stakeAmount + newStakeAmount;
           expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
@@ -488,7 +488,7 @@ describe("CookPool", function () {
           expect(await this.cookPool.totalVesting()).to.be.equal(harvestAmount);
           expect(await this.cookPool.balanceOfStaked(addrUserA)).to.be.equal(totalStakeAmount);
           expect(await this.cookPool.totalStaked()).to.be.equal(totalStakeAmount);
-          let expectedPhantom = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK / 2 + harvestAmount + INITIAL_STAKE_MULTIPLE*15;
+          let expectedPhantom = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK / 2 + harvestAmount + INITIAL_STAKE_MULTIPLE * 15;
           expect(await this.cookPool.balanceOfPhantom(addrUserA)).to.be.equal(expectedPhantom);
           expect(await this.cookPool.totalPhantom()).to.be.equal(expectedPhantom);
 
@@ -496,16 +496,16 @@ describe("CookPool", function () {
           expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(0);
 
           await this.cookPool.setBlockTimestamp(1600992000); // 1598400000+(86400*30) after 1 months
-          expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount/6);
+          expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount / 6);
 
           await this.cookPool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) after 3 months
-          expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount/2);
+          expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount / 2);
 
           await this.cookPool.setBlockTimestamp(1613952000); // 1598400000+(86400*180) after 6 months
           expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount);
         });
 
-        it('should emit Harvest event with correct amount', async function() {
+        it('should emit Harvest event with correct amount', async function () {
           await expect(this.cookPool.connect(userA).harvest(5))
             .to.emit(this.cookPool, 'Harvest')
             .withArgs(await userA.getAddress(), 5);
@@ -519,12 +519,12 @@ describe("CookPool", function () {
     const initialTimestamp = 1598400000;
     const initialHarvestAmount = 60;
 
-    describe('With no vesting duration', function() {
+    describe('With no vesting duration', function () {
       beforeEach('set vesting duration to 0', async function () {
         await this.cookPool.setVestingDuration(0);
       });
 
-      it('should be able to claim all the rewards right after harvest', async function() {
+      it('should be able to claim all the rewards right after harvest', async function () {
         await this.cookPool.setBlockNumber(initialBlockNumber);
         await this.cook.connect(owner).transfer(addrUserA, 20);
         await this.cook.connect(userA).approve(this.cookPool.address, 20);
@@ -539,7 +539,7 @@ describe("CookPool", function () {
         newBlockNumber = 61;
         await this.cookPool.setBlockNumber(newBlockNumber);
         await this.cookPool.connect(userA).stake(5);
-        let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+        let expectedReward = (newBlockNumber - lastRewardBlock) * REWARD_PER_BLOCK;
         expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
         await this.cookPool.setBlockTimestamp(initialTimestamp);
@@ -553,8 +553,8 @@ describe("CookPool", function () {
       });
     });
 
-    describe('With normal vesting duration', function() {
-      beforeEach('userA stakes to get rewards and harvests half rewards', async function() {
+    describe('With normal vesting duration', function () {
+      beforeEach('userA stakes to get rewards and harvests half rewards', async function () {
         await this.cookPool.setBlockNumber(initialBlockNumber);
         await this.cook.connect(owner).transfer(addrUserA, 20);
         await this.cook.connect(userA).approve(this.cookPool.address, 20);
@@ -569,48 +569,48 @@ describe("CookPool", function () {
         newBlockNumber = 61;
         await this.cookPool.setBlockNumber(newBlockNumber);
         await this.cookPool.connect(userA).stake(5);
-        let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+        let expectedReward = (newBlockNumber - lastRewardBlock) * REWARD_PER_BLOCK;
         expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
         await this.cookPool.setBlockTimestamp(initialTimestamp);
         await this.cookPool.connect(userA).harvest(initialHarvestAmount);
 
-        expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward-initialHarvestAmount);
+        expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward - initialHarvestAmount);
         expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(0);
         expect(await this.cookPool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount);
       });
 
-      describe('during vesting period', function() {
+      describe('during vesting period', function () {
         beforeEach('advance after half of the vesting schedule', async function () {
           await this.cookPool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) => after 3 months
         });
 
         it('should be able to claim the the vested amount', async function () {
-          expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount/2);
-          await expect(this.cookPool.connect(userA).claim(initialHarvestAmount/2)).to.not.be.reverted;
+          expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount / 2);
+          await expect(this.cookPool.connect(userA).claim(initialHarvestAmount / 2)).to.not.be.reverted;
         });
 
-        it('should get reverted if tries to claim the amount more than the claimable', async function() {
-          await expect(this.cookPool.connect(userA).claim(initialHarvestAmount/2 + 5)).to.be.revertedWith("insufficient claimable cook balance");
+        it('should get reverted if tries to claim the amount more than the claimable', async function () {
+          await expect(this.cookPool.connect(userA).claim(initialHarvestAmount / 2 + 5)).to.be.revertedWith("insufficient claimable cook balance");
         });
 
-        it('the balance of claimable for userA should be updated correctly and userA can claim part of the claimable' , async function() {
-          let claimable = initialHarvestAmount/2;
+        it('the balance of claimable for userA should be updated correctly and userA can claim part of the claimable', async function () {
+          let claimable = initialHarvestAmount / 2;
           expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(claimable);
 
-          let claimed = claimable/2;
+          let claimed = claimable / 2;
           await this.cookPool.connect(userA).claim(claimed);
-          let remainingClaimable = claimable-claimed;
+          let remainingClaimable = claimable - claimed;
           expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
 
           let remainingReward = await this.cookPool.balanceOfRewarded(addrUserA);
-          let harvestAmount = remainingReward/1;
+          let harvestAmount = remainingReward / 1;
           await this.cookPool.connect(userA).harvest(harvestAmount);
           expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
-          expect(await this.cookPool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount+harvestAmount);
+          expect(await this.cookPool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount + harvestAmount);
 
           await this.cookPool.setBlockTimestamp(1613952000); // 1598400000+(86400*180) => after 6 months for the inital harvest and after 3 months for the second harvest
-          expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount+(harvestAmount/2)-claimed);
+          expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount + (harvestAmount / 2) - claimed);
         });
       });
 
@@ -629,7 +629,7 @@ describe("CookPool", function () {
           await expect(this.cookPool.connect(userA).claim(0)).to.be.revertedWith("zero claim cook amount");
         });
 
-        it('Claim event should be emitted correctly', async function() {
+        it('Claim event should be emitted correctly', async function () {
           await expect(this.cookPool.connect(userA).claim(initialHarvestAmount))
             .to.emit(this.cookPool, 'Claim')
             .withArgs(await userA.getAddress(), initialHarvestAmount);
@@ -643,7 +643,7 @@ describe("CookPool", function () {
     const initialTimestamp = 1598400000;
     const initialHarvestAmount = 60;
 
-    beforeEach('userA stakes cook to get rewards and harvests half rewards', async function() {
+    beforeEach('userA stakes cook to get rewards and harvests half rewards', async function () {
       await this.cookPool.setBlockNumber(initialBlockNumber);
       await this.cook.connect(owner).transfer(addrUserA, 20);
       await this.cook.connect(userA).approve(this.cookPool.address, 20);
@@ -658,37 +658,37 @@ describe("CookPool", function () {
       newBlockNumber = 61;
       await this.cookPool.setBlockNumber(newBlockNumber);
       await this.cookPool.connect(userA).stake(5);
-      let expectedReward = (newBlockNumber-lastRewardBlock)*REWARD_PER_BLOCK;
+      let expectedReward = (newBlockNumber - lastRewardBlock) * REWARD_PER_BLOCK;
       expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
 
       await this.cookPool.setBlockTimestamp(initialTimestamp);
       await this.cookPool.connect(userA).harvest(initialHarvestAmount);
 
-      expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward-initialHarvestAmount);
+      expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward - initialHarvestAmount);
       expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(0);
       expect(await this.cookPool.balanceOfVesting(addrUserA)).to.be.equal(initialHarvestAmount);
     });
 
-    describe('during vesting period', function() {
+    describe('during vesting period', function () {
       beforeEach('advance after half of the vesting schedule', async function () {
         await this.cookPool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) => after 3 months
       });
 
       it('should be able to zap the the vested amount', async function () {
-        expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount/2);
-        await this.cookPool.connect(userA).zapCook(initialHarvestAmount/2)
+        expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount / 2);
+        await this.cookPool.connect(userA).zapCook(initialHarvestAmount / 2)
       });
 
       it('Cap limit', async function () {
         await cookPoolInstance.connect(owner).setTotalPoolCapLimit(1);
-        await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount/2)).to.be.revertedWith('The amount to be staked will exceed pool limit');
+        await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount / 2)).to.be.revertedWith('The amount to be staked will exceed pool limit');
 
         await cookPoolInstance.connect(owner).setTotalPoolCapLimit(initialHarvestAmount * 2);
         await cookPoolInstance.connect(owner).setStakeLimitPerAddress(1);
-        await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount/2)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
+        await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount / 2)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
 
         await cookPoolInstance.connect(owner).setStakeLimitPerAddress(initialHarvestAmount * 2);
-        await this.cookPool.connect(userA).zapCook(initialHarvestAmount/2);
+        await this.cookPool.connect(userA).zapCook(initialHarvestAmount / 2);
       });
 
       it('should not be able to zap zero or negative cook amount', async function () {
@@ -696,26 +696,26 @@ describe("CookPool", function () {
         await expect(this.cookPool.connect(userA).zapCook(0)).to.be.revertedWith("zero zap amount");
       });
 
-      it('should get reverted if tries to zap the amount more than the claimable', async function() {
-        await expect(this.cookPool.connect(userA).zapCook(initialHarvestAmount/2 + 5)).to.be.revertedWith("insufficient claimable balance");
+      it('should get reverted if tries to zap the amount more than the claimable', async function () {
+        await expect(this.cookPool.connect(userA).zapCook(initialHarvestAmount / 2 + 5)).to.be.revertedWith("insufficient claimable balance");
       });
 
-      it('the balance of claimable for userA should be updated correctly and userA can zap part of the claimable' , async function() {
+      it('the balance of claimable for userA should be updated correctly and userA can zap part of the claimable', async function () {
         let previousStakeAmount = await this.cookPool.balanceOfStaked(addrUserA);
-        let claimable = initialHarvestAmount/2;
+        let claimable = initialHarvestAmount / 2;
         expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(claimable);
 
-        let zapCookAmount = claimable/2;
+        let zapCookAmount = claimable / 2;
         await this.cookPool.connect(userA).zapCook(zapCookAmount);
-        let remainingClaimable = claimable-zapCookAmount;
+        let remainingClaimable = claimable - zapCookAmount;
         let expectedNewCook = zapCookAmount;
         expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
         expect(await this.cookPool.balanceOfClaimed(addrUserA)).to.be.equal(zapCookAmount);
         expect(await this.cookPool.balanceOfStaked(addrUserA)).to.be.equal(previousStakeAmount.add(expectedNewCook));
       });
 
-      it('ZapCook event should be emitted correctly', async function() {
-        let zapCookAmount = initialHarvestAmount/2;
+      it('ZapCook event should be emitted correctly', async function () {
+        let zapCookAmount = initialHarvestAmount / 2;
         let expectedCookAmount = zapCookAmount;
         await expect(this.cookPool.connect(userA).zapCook(zapCookAmount))
           .to.emit(this.cookPool, 'ZapCook')
@@ -723,15 +723,15 @@ describe("CookPool", function () {
       });
     });
 
-    describe('during vesting period', function() {
+    describe('during vesting period', function () {
 
       beforeEach('advance after half of the vesting schedule', async function () {
         await this.cookPool.setBlockTimestamp(1606176000); // 1598400000+(86400*90) => after 3 months
       });
 
       it('should be able to zap the vested amount with ETH', async function () {
-        expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount/2);
-        await this.cookPool.connect(userA).zapCook(initialHarvestAmount/2);
+        expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(initialHarvestAmount / 2);
+        await this.cookPool.connect(userA).zapCook(initialHarvestAmount / 2);
       });
 
       it('should not be able to zap zero or negative amount with Cook', async function () {
@@ -739,26 +739,26 @@ describe("CookPool", function () {
         await expect(this.cookPool.connect(userA).zapCook(0)).to.be.revertedWith("zero zap amount");
       });
 
-      it('should get reverted if tries to zap the cook amount with ETH more than the claimable', async function() {
-        await expect(this.cookPool.connect(userA).zapCook(initialHarvestAmount/2 + 5000000000000000)).to.be.revertedWith("insufficient claimable balance");
+      it('should get reverted if tries to zap the cook amount with ETH more than the claimable', async function () {
+        await expect(this.cookPool.connect(userA).zapCook(initialHarvestAmount / 2 + 5000000000000000)).to.be.revertedWith("insufficient claimable balance");
       });
 
-      it('the balance of claimable for userA should be updated correctly and userA can zap part of the claimable' , async function() {
+      it('the balance of claimable for userA should be updated correctly and userA can zap part of the claimable', async function () {
         let previousStakeAmount = await this.cookPool.balanceOfStaked(addrUserA);
-        let claimable = initialHarvestAmount/2;
+        let claimable = initialHarvestAmount / 2;
         expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(claimable);
 
-        let zapCookAmount = claimable/2;
+        let zapCookAmount = claimable / 2;
         await this.cookPool.connect(userA).zapCook(zapCookAmount);
-        let remainingClaimable = claimable-zapCookAmount;
+        let remainingClaimable = claimable - zapCookAmount;
         let expectedNewUniv2 = zapCookAmount;
         expect(await this.cookPool.balanceOfClaimable(addrUserA)).to.be.equal(remainingClaimable);
         expect(await this.cookPool.balanceOfClaimed(addrUserA)).to.be.equal(zapCookAmount);
         expect(await this.cookPool.balanceOfStaked(addrUserA)).to.be.equal(previousStakeAmount.add(expectedNewUniv2));
       });
 
-      it('ZapCook event should be emitted correctly', async function() {
-        let zapCookAmount = initialHarvestAmount/2;
+      it('ZapCook event should be emitted correctly', async function () {
+        let zapCookAmount = initialHarvestAmount / 2;
         let expectedCookAmount = zapCookAmount;
         await expect(this.cookPool.connect(userA).zapCook(zapCookAmount))
           .to.emit(this.cookPool, 'ZapCook')

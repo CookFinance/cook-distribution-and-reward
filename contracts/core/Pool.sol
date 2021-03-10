@@ -2,8 +2,8 @@ pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
-import '../external/UniswapV2Library.sol';
+import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
+import "../external/UniswapV2Library.sol";
 import "./Constants.sol";
 import "./PoolSetters.sol";
 import "./IPool.sol";
@@ -13,7 +13,13 @@ import "../oracle/IWETH.sol";
 contract Pool is PoolSetters, IPool {
     using SafeMath for uint256;
 
-    constructor(address cook, address univ2, uint256 cook_reward_per_block, uint256 totalPoolCapLimit, uint256 stakeLimitPerAddress) public {
+    constructor(
+        address cook,
+        address univ2,
+        uint256 cook_reward_per_block,
+        uint256 totalPoolCapLimit,
+        uint256 stakeLimitPerAddress
+    ) public {
         _state.provider.cook = IERC20(cook); //COOK
         _state.provider.univ2 = IERC20(univ2); //univ2 pair COOK/WETH
         _state.pauseMinig = false;
@@ -30,10 +36,10 @@ contract Pool is PoolSetters, IPool {
     event ZapLP(address indexed account, uint256 newUniv2);
 
     fallback() external payable {
-      revert();
+        revert();
     }
 
-    function stake(uint256 univ2Amount) override external {
+    function stake(uint256 univ2Amount) external override {
         checkMiningPaused();
         ensureAddrNotBlacklisted(msg.sender);
 
@@ -47,24 +53,29 @@ contract Pool is PoolSetters, IPool {
         emit Stake(msg.sender, univ2Amount);
     }
 
-    function updateStakeStates(uint256 univ2Amount, address userAddress) internal {
-        require(
-            univ2Amount > 0,
-            "zero stake amount"
-        );
+    function updateStakeStates(uint256 univ2Amount, address userAddress)
+        internal
+    {
+        require(univ2Amount > 0, "zero stake amount");
 
         calculateNewRewardSinceLastRewardBlock();
 
         uint256 totalRewardedWithPhantom = totalRewarded().add(totalPhantom());
-        uint256 newPhantom = totalStaked() == 0 ?
-            totalRewarded() == 0 ? Constants.getInitialStakeMultiple().mul(univ2Amount) : 0 :
-            totalRewardedWithPhantom.mul(univ2Amount).div(totalStaked());
+        uint256 newPhantom =
+            totalStaked() == 0
+                ? totalRewarded() == 0
+                    ? Constants.getInitialStakeMultiple().mul(univ2Amount)
+                    : 0
+                : totalRewardedWithPhantom.mul(univ2Amount).div(totalStaked());
 
         incrementBalanceOfStaked(userAddress, univ2Amount);
         incrementBalanceOfPhantom(userAddress, newPhantom);
     }
 
-    function zapStake(uint256 univ2Amount, address userAddress) override external {
+    function zapStake(uint256 univ2Amount, address userAddress)
+        external
+        override
+    {
         checkMiningPaused();
         ensureAddrNotBlacklisted(userAddress);
 
@@ -78,7 +89,7 @@ contract Pool is PoolSetters, IPool {
         emit ZapLP(userAddress, univ2Amount);
     }
 
-    function calculateNewRewardSinceLastRewardBlock() virtual internal {
+    function calculateNewRewardSinceLastRewardBlock() internal virtual {
         uint256 lastRewardBlock = lastRewardBlock();
         uint256 blockNumber = blockNumber();
         if (blockNumber > lastRewardBlock) {
@@ -94,10 +105,7 @@ contract Pool is PoolSetters, IPool {
     }
 
     function unstake(uint256 univ2Amount) external override {
-        require(
-            univ2Amount > 0,
-            "zero unstake amount"
-        );
+        require(univ2Amount > 0, "zero unstake amount");
 
         uint256 stakedBalance = balanceOfStaked(msg.sender);
         uint256 unstakableBalance = balanceOfUnstakable(msg.sender);
@@ -108,13 +116,23 @@ contract Pool is PoolSetters, IPool {
 
         calculateNewRewardSinceLastRewardBlock();
 
-        uint256 newClaimable = balanceOfRewarded(msg.sender).mul(univ2Amount).div(stakedBalance);
-        uint256 lessPhantom = balanceOfPhantom(msg.sender).mul(univ2Amount).div(stakedBalance);
+        uint256 newClaimable =
+            balanceOfRewarded(msg.sender).mul(univ2Amount).div(stakedBalance);
+        uint256 lessPhantom =
+            balanceOfPhantom(msg.sender).mul(univ2Amount).div(stakedBalance);
 
         addToVestingSchdule(msg.sender, newClaimable);
         decrementTotalRewarded(newClaimable, "insufficient rewarded balance");
-        decrementBalanceOfStaked(msg.sender, univ2Amount, "insufficient staked balance");
-        decrementBalanceOfPhantom(msg.sender, lessPhantom, "insufficient phantom balance");
+        decrementBalanceOfStaked(
+            msg.sender,
+            univ2Amount,
+            "insufficient staked balance"
+        );
+        decrementBalanceOfPhantom(
+            msg.sender,
+            lessPhantom,
+            "insufficient phantom balance"
+        );
 
         univ2().transfer(msg.sender, univ2Amount);
         uniBalanceCheck();
@@ -125,15 +143,9 @@ contract Pool is PoolSetters, IPool {
     function harvest(uint256 cookAmount) external override {
         ensureAddrNotBlacklisted(msg.sender);
 
-        require(
-            cookAmount > 0,
-            "zero harvest amount"
-        );
+        require(cookAmount > 0, "zero harvest amount");
 
-        require(
-            totalRewarded() > 0,
-            "insufficient total rewarded"
-        );
+        require(totalRewarded() > 0, "insufficient total rewarded");
 
         require(
             balanceOfRewarded(msg.sender) >= cookAmount,
@@ -152,10 +164,7 @@ contract Pool is PoolSetters, IPool {
     function claim(uint256 cookAmount) external override {
         ensureAddrNotBlacklisted(msg.sender);
 
-        require(
-            cookAmount > 0,
-            "zero claim amount"
-        );
+        require(cookAmount > 0, "zero claim amount");
 
         require(
             balanceOfClaimable(msg.sender) >= cookAmount,
@@ -168,85 +177,102 @@ contract Pool is PoolSetters, IPool {
         emit Claim(msg.sender, cookAmount);
     }
 
-    function _calWethAmountToPairCook(uint256 cookAmount) internal returns (uint256, address) {
+    function _calWethAmountToPairCook(uint256 cookAmount)
+        internal
+        returns (uint256, address)
+    {
         IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
 
-        uint reserve0;
-        uint reserve1;
+        uint256 reserve0;
+        uint256 reserve1;
         address weth;
         if (lpPair.token0() == address(cook())) {
-            (reserve0, reserve1,) = lpPair.getReserves();
+            (reserve0, reserve1, ) = lpPair.getReserves();
             weth = lpPair.token1();
         } else {
-            (reserve1, reserve0,) = lpPair.getReserves();
+            (reserve1, reserve0, ) = lpPair.getReserves();
             weth = lpPair.token0();
         }
 
-        uint256 wethAmount = (reserve0 == 0 && reserve1 == 0) ?
-                cookAmount :
-                UniswapV2Library.quote(cookAmount, reserve0, reserve1);
+        uint256 wethAmount =
+            (reserve0 == 0 && reserve1 == 0)
+                ? cookAmount
+                : UniswapV2Library.quote(cookAmount, reserve0, reserve1);
 
         return (wethAmount, weth);
     }
 
-    function addLiquidity(uint256 cookAmount) internal returns (uint256, uint256) {
-        (uint256 wethAmount, address wethAddress) = _calWethAmountToPairCook(cookAmount);
+    function addLiquidity(uint256 cookAmount)
+        internal
+        returns (uint256, uint256)
+    {
+        (uint256 wethAmount, address wethAddress) =
+            _calWethAmountToPairCook(cookAmount);
         IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
 
         cook().transfer(address(univ2()), cookAmount);
-        IERC20(wethAddress).transferFrom(msg.sender, address(univ2()), wethAmount);
+        IERC20(wethAddress).transferFrom(
+            msg.sender,
+            address(univ2()),
+            wethAmount
+        );
         return (wethAmount, lpPair.mint(address(this)));
     }
 
-    function addLiquidityWithEth(uint256 cookAmount) internal returns(uint256, uint256) {
-        (uint256 wethAmount, address wethAddress) = _calWethAmountToPairCook(cookAmount);
+    function addLiquidityWithEth(uint256 cookAmount)
+        internal
+        returns (uint256, uint256)
+    {
+        (uint256 wethAmount, address wethAddress) =
+            _calWethAmountToPairCook(cookAmount);
 
-        require (
-          msg.value == wethAmount,
-          "Please provide exact amount of eth needed to pair cook tokens"
+        require(
+            msg.value == wethAmount,
+            "Please provide exact amount of eth needed to pair cook tokens"
         );
         IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
 
         // Swap ETH to WETH for user
-        IWETH(wethAddress).deposit{ value: msg.value }();
+        IWETH(wethAddress).deposit{value: msg.value}();
         cook().transfer(address(univ2()), cookAmount);
 
-        IERC20(wethAddress).transferFrom(address(this), address(univ2()), wethAmount);
+        IERC20(wethAddress).transferFrom(
+            address(this),
+            address(univ2()),
+            wethAmount
+        );
 
         return (wethAmount, lpPair.mint(address(this)));
     }
 
     function _zapLP(uint256 cookAmount, bool isWithEth) internal {
-      require(
-          cookAmount > 0,
-          "zero zap amount"
-      );
+        require(cookAmount > 0, "zero zap amount");
 
-      require(
-          balanceOfClaimable(msg.sender) >= cookAmount,
-          "insufficient claimable balance"
-      );
+        require(
+            balanceOfClaimable(msg.sender) >= cookAmount,
+            "insufficient claimable balance"
+        );
 
-      checkMiningPaused();
-      ensureAddrNotBlacklisted(msg.sender);
+        checkMiningPaused();
+        ensureAddrNotBlacklisted(msg.sender);
 
-      uint256 lessWeth = 0;
-      uint256 newUniv2 = 0;
+        uint256 lessWeth = 0;
+        uint256 newUniv2 = 0;
 
-      if (isWithEth) {
-          (lessWeth, newUniv2) = addLiquidityWithEth(cookAmount);
-      } else {
-          (lessWeth, newUniv2) = addLiquidity(cookAmount);
-      }
+        if (isWithEth) {
+            (lessWeth, newUniv2) = addLiquidityWithEth(cookAmount);
+        } else {
+            (lessWeth, newUniv2) = addLiquidity(cookAmount);
+        }
 
-      checkPoolStakeCapLimit(newUniv2);
-      checkPerAddrStakeLimit(newUniv2, msg.sender);
+        checkPoolStakeCapLimit(newUniv2);
+        checkPerAddrStakeLimit(newUniv2, msg.sender);
 
-      incrementBalanceOfClaimed(msg.sender, cookAmount);
-      updateStakeStates(newUniv2, msg.sender);
-      uniBalanceCheck();
+        incrementBalanceOfClaimed(msg.sender, cookAmount);
+        updateStakeStates(newUniv2, msg.sender);
+        uniBalanceCheck();
 
-      emit ZapLP(msg.sender, newUniv2);
+        emit ZapLP(msg.sender, newUniv2);
     }
 
     function zapLP(uint256 cookAmount) external {
@@ -266,7 +292,8 @@ contract Pool is PoolSetters, IPool {
 
     function cookBalanceCheck() private view {
         require(
-            cook().balanceOf(address(this)) >= totalVesting() + totalRewarded() - totalClaimed(),
+            cook().balanceOf(address(this)) >=
+                totalVesting() + totalRewarded() - totalClaimed(),
             "Inconsistent COOK balances"
         );
     }

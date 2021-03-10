@@ -18,9 +18,13 @@ pragma solidity ^0.6.2;
 pragma experimental ABIEncoderV2;
 
 abstract contract IPool {
-    function stake(uint256 value) virtual external ;
-    function unstake(uint256 value) virtual external ;
-    function harvest(uint256 value) virtual external ;
-    function claim(uint256 value) virtual external ;
-    function zapStake(uint256 value, address userAddress) virtual external ;
+    function stake(uint256 value) external virtual;
+
+    function unstake(uint256 value) external virtual;
+
+    function harvest(uint256 value) external virtual;
+
+    function claim(uint256 value) external virtual;
+
+    function zapStake(uint256 value, address userAddress) external virtual;
 }

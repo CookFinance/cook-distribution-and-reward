@@ -4,14 +4,13 @@ pragma experimental ABIEncoderV2;
 import "../oracle/IPriceConsumerV3.sol";
 
 contract MockSettablePriceConsumerV3 is IPriceConsumerV3 {
-    int internal _price;
+    int256 internal _price;
 
-    function set(int price) external {
+    function set(int256 price) external {
         _price = price;
     }
 
-    function getLatestPrice() override public view returns (int price) {
+    function getLatestPrice() public view override returns (int256 price) {
         return _price;
     }
-
 }

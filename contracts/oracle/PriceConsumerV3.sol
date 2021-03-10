@@ -4,7 +4,6 @@ import "@chainlink/contracts/v0.6/interfaces/AggregatorV3Interface.sol";
 import "./IPriceConsumerV3.sol";
 
 contract PriceConsumerV3 is IPriceConsumerV3 {
-
     AggregatorV3Interface internal priceFeed;
 
     /**
@@ -13,18 +12,20 @@ contract PriceConsumerV3 is IPriceConsumerV3 {
      * Address: 0x8A753747A1Fa494EC906cE90E9f37563A8AF630e
      */
     constructor() public {
-        priceFeed = AggregatorV3Interface(0x8A753747A1Fa494EC906cE90E9f37563A8AF630e);
+        priceFeed = AggregatorV3Interface(
+            0x8A753747A1Fa494EC906cE90E9f37563A8AF630e
+        );
     }
 
     /**
      * Returns the latest price
      */
-    function getLatestPrice() public override view returns (int) {
+    function getLatestPrice() public view override returns (int256) {
         (
             uint80 roundID,
-            int price,
-            uint startedAt,
-            uint timeStamp,
+            int256 price,
+            uint256 startedAt,
+            uint256 timeStamp,
             uint80 answeredInRound
         ) = priceFeed.latestRoundData();
         return price;

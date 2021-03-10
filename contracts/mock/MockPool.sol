@@ -5,7 +5,6 @@ import "./MockState.sol";
 import "../core/Constants.sol";
 
 contract MockPool is Pool, MockState {
-
     uint256 private _blockNumber;
     uint256 private _blockTimestamp;
     uint256 private _stakeLockupDuration;
@@ -13,8 +12,13 @@ contract MockPool is Pool, MockState {
     address private _cook;
     address private _univ2;
 
-    constructor(address cook, address univ2, uint256 stakeLockupDuration, uint256 vestingDuration, uint256 cook_reward_per_block)
-    Pool(cook, univ2, cook_reward_per_block, 0, 0) public {
+    constructor(
+        address cook,
+        address univ2,
+        uint256 stakeLockupDuration,
+        uint256 vestingDuration,
+        uint256 cook_reward_per_block
+    ) public Pool(cook, univ2, cook_reward_per_block, 0, 0) {
         _cook = cook;
         _univ2 = univ2;
         _blockNumber = block.number;
@@ -23,11 +27,11 @@ contract MockPool is Pool, MockState {
         _vestingDuration = vestingDuration;
     }
 
-    function cook() public override view returns (IERC20) {
+    function cook() public view override returns (IERC20) {
         return IERC20(_cook);
     }
 
-    function univ2() public override view returns (IERC20) {
+    function univ2() public view override returns (IERC20) {
         return IERC20(_univ2);
     }
 
@@ -38,7 +42,7 @@ contract MockPool is Pool, MockState {
         _blockNumber = blockNumber;
     }
 
-    function blockNumber() internal override view returns (uint256) {
+    function blockNumber() internal view override returns (uint256) {
         return _blockNumber;
     }
 
@@ -50,11 +54,11 @@ contract MockPool is Pool, MockState {
         _blockTimestamp = blockTimestamp;
     }
 
-    function blockTimestamp() internal override view returns (uint256) {
+    function blockTimestamp() internal view override returns (uint256) {
         return _blockTimestamp;
     }
 
-     function blockTimestampE() external view returns (uint256) {
+    function blockTimestampE() external view returns (uint256) {
         return _blockTimestamp;
     }
 
@@ -62,7 +66,7 @@ contract MockPool is Pool, MockState {
         _stakeLockupDuration = stakeLockupDuration;
     }
 
-    function getStakeLockupDuration() public override view returns (uint256) {
+    function getStakeLockupDuration() public view override returns (uint256) {
         return _stakeLockupDuration;
     }
 
@@ -70,8 +74,7 @@ contract MockPool is Pool, MockState {
         _vestingDuration = vestingDuration;
     }
 
-    function getVestingDuration() public override view returns (uint256) {
+    function getVestingDuration() public view override returns (uint256) {
         return _vestingDuration;
     }
-
 }
