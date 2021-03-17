@@ -13,7 +13,6 @@ contract MockCookDistribution is CookDistribution {
         uint256 start, // in unix
         uint256 duration, // in day
         uint32 interval, // in day
-        bool revocable,
         address oracle_,
         address priceConsumer_
     )
@@ -25,7 +24,6 @@ contract MockCookDistribution is CookDistribution {
             start,
             duration,
             interval,
-            revocable,
             oracle_,
             priceConsumer_
         )

@@ -14,8 +14,7 @@ import "../external/UniswapV2Library.sol";
 /**
  * @title TokenVesting
  * @dev A token holder contract that can release its token balance gradually like a
- * typical vesting scheme, with a cliff and vesting period. Optionally revocable by the
- * owner.
+ * typical vesting scheme, with a cliff and vesting period.
  */
 contract CookDistribution is Ownable {
     using SafeMath for uint256;
@@ -66,8 +65,6 @@ contract CookDistribution is Ownable {
     IOracle private _oracle;
     IPriceConsumerV3 private _priceConsumer;
 
-    bool private _revocable;
-
     // Date-related constants for sanity-checking dates to reject obvious erroneous inputs
     // SECONDS_PER_DAY = 30 for test only
     uint32 private constant SECONDS_PER_DAY = 86400; /* 86400 seconds in a day */
@@ -93,7 +90,6 @@ contract CookDistribution is Ownable {
         uint256 start, // in unix
         uint256 duration, // in day
         uint32 interval, // in day
-        bool revocable,
         address oracle_,
         address priceConsumer_
     ) public {
@@ -129,7 +125,6 @@ contract CookDistribution is Ownable {
         }
 
         _token = token_;
-        _revocable = revocable;
         _duration = duration;
         _start = start;
         _interval = interval;
@@ -211,13 +206,6 @@ contract CookDistribution is Ownable {
      */
     function duration() public view returns (uint256) {
         return _duration;
-    }
-
-    /**
-     * @return true if the vesting is revocable.
-     */
-    function revocable() public view returns (bool) {
-        return _revocable;
     }
 
     /**

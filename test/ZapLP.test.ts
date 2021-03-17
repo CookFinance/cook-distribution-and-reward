@@ -149,7 +149,7 @@ describe("Zap", () => {
       owner
     );
 
-    cookInstance = (await cookDistributionFactory.deploy(this.cook.address, [address1, address2], ["1200000000000000000000", "1200000000000000000000"], adjustStartDate, 360, 30, false, this.oracle.address, this.priceConsumer.address)) as MockCookDistribution;
+    cookInstance = (await cookDistributionFactory.deploy(this.cook.address, [address1, address2], ["1200000000000000000000", "1200000000000000000000"], adjustStartDate, 360, 30, this.oracle.address, this.priceConsumer.address)) as MockCookDistribution;
     this.cookDistribution = await cookInstance.deployed();
 
     // mint cook to cookDistribution

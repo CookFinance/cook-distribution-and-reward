@@ -85,8 +85,7 @@ describe("CookDistribution", () => {
       // uint256[] memory amounts_,
       // uint256 start, unix
       // uint256 duration, day
-      // bool revocable
-      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, false, oracle.address, priceConsumer.address)) as MockCookDistribution;
+      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, oracle.address, priceConsumer.address)) as MockCookDistribution;
       await cookInstance.deployed();
 
       // transfer from owner to contract
@@ -125,7 +124,7 @@ describe("CookDistribution", () => {
         owner
       );
 
-      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, false, oracle.address, priceConsumer.address)) as MockCookDistribution;
+      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, oracle.address, priceConsumer.address)) as MockCookDistribution;
       await cookInstance.deployed();
 
       // transfer from owner to contract
@@ -177,7 +176,7 @@ describe("CookDistribution", () => {
         owner
       );
 
-      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, false, oracle.address, priceConsumer.address)) as MockCookDistribution;
+      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, oracle.address, priceConsumer.address)) as MockCookDistribution;
       await cookInstance.deployed();
 
       // transfer from owner to contract
@@ -234,7 +233,7 @@ describe("CookDistribution", () => {
         owner
       );
 
-      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, false, oracle.address, priceConsumer.address)) as MockCookDistribution;
+      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, oracle.address, priceConsumer.address)) as MockCookDistribution;
       await cookInstance.deployed();
 
       // transfer from owner to contract
@@ -285,7 +284,7 @@ describe("CookDistribution", () => {
         owner
       );
 
-      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, false, oracle.address, priceConsumer.address)) as MockCookDistribution;
+      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, oracle.address, priceConsumer.address)) as MockCookDistribution;
       await cookInstance.deployed();
 
       // transfer from owner to contract
@@ -412,7 +411,7 @@ describe("CookDistribution", () => {
         owner
       );
 
-      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, false, oracle.address, priceConsumer.address)) as MockCookDistribution;
+      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, oracle.address, priceConsumer.address)) as MockCookDistribution;
       await cookInstance.deployed();
 
       // transfer from owner to contract
