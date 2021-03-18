@@ -25,14 +25,13 @@ contract CookDistribution is Ownable {
     struct Allocation {
         uint256 amount;
         uint256 released;
-        bool revoked;
+        bool blackListed;
+        bool isRegistered;
     }
 
     // beneficiary of tokens after they are released
     mapping(address => Allocation) private _beneficiaryAllocations;
 
-    // beneficiary that has been registered
-    mapping(address => bool) private _isRegistered;
     // oracle price data (dayNumber => price)
     mapping(uint256 => uint256) private _oraclePriceFeed;
 
@@ -75,11 +74,6 @@ contract CookDistribution is Ownable {
     mapping(uint256 => uint256) private _pricePercentageMapping;
 
     // Fields for Admin
-
-    // blacklisted beneficiary
-    // if an address is blacklisted, the address can't claim/zap cook token
-    mapping(address => bool) private _isBlacklisted;
-
     // stop everyone from claiming/zapping cook token due to emgergency
     bool private _pauseClaim;
 
@@ -116,10 +110,9 @@ contract CookDistribution is Ownable {
             _beneficiaryAllocations[beneficiaries_[i]] = Allocation(
                 amounts_[i],
                 0,
-                false
+                false,
+                true
             );
-
-            _isRegistered[beneficiaries_[i]] = true;
 
             emit AllocationRegistered(beneficiaries_[i], amounts_[i]);
         }
@@ -216,7 +209,7 @@ contract CookDistribution is Ownable {
         view
         returns (bool)
     {
-        return _isRegistered[userAddress];
+        return _beneficiaryAllocations[userAddress].isRegistered;
     }
 
     function getUserVestingAmount(address userAddress)
@@ -333,12 +326,12 @@ contract CookDistribution is Ownable {
         address userAddress = msg.sender;
 
         require(
-            _isRegistered[userAddress] == true,
+            _beneficiaryAllocations[userAddress].isRegistered == true,
             "You have to be a registered address in order to release tokens."
         );
 
         require(
-            _isBlacklisted[userAddress] == false,
+            _beneficiaryAllocations[userAddress].blackListed == false,
             "Your address is blacklisted"
         );
 
@@ -432,12 +425,12 @@ contract CookDistribution is Ownable {
 
     function _checkValidZap(address userAddress, uint256 cookAmount) internal {
         require(
-            _isRegistered[userAddress] == true,
+            _beneficiaryAllocations[userAddress].isRegistered == true,
             "You have to be a registered address in order to release tokens."
         );
 
         require(
-            _isBlacklisted[userAddress] == false,
+            _beneficiaryAllocations[userAddress].blackListed == false,
             "Your address is blacklisted"
         );
 
@@ -584,11 +577,12 @@ contract CookDistribution is Ownable {
         address beneficiaryAddress,
         uint256 amount
     ) public onlyOwner {
-        _isRegistered[beneficiaryAddress] = true;
+        _beneficiaryAllocations[beneficiaryAddress].isRegistered = true;
         _beneficiaryAllocations[beneficiaryAddress] = Allocation(
             amount,
             0,
-            false
+            false,
+            true
         );
     }
 
@@ -693,13 +687,13 @@ contract CookDistribution is Ownable {
     }
 
     // Put an evil address into blacklist
-    function blacklistAddress(address addr) public onlyOwner {
-        _isBlacklisted[addr] = true;
+    function blacklistAddress(address userAddress) public onlyOwner {
+        _beneficiaryAllocations[userAddress].blackListed = true;
     }
 
     //Remove an address from blacklist
-    function removeAddressFromBlacklist(address addr) public onlyOwner {
-        _isBlacklisted[addr] = false;
+    function removeAddressFromBlacklist(address userAddress) public onlyOwner {
+        _beneficiaryAllocations[userAddress].blackListed = false;
     }
 
     // Pause all claim due to emergency
