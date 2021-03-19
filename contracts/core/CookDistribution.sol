@@ -3,6 +3,7 @@ pragma solidity ^0.6.2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "../oracle/IOracle.sol";
 import "../oracle/IWETH.sol";
@@ -18,6 +19,7 @@ import "../external/UniswapV2Library.sol";
  */
 contract CookDistribution is Ownable {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     event AllocationRegistered(address indexed beneficiary, uint256 amount);
     event TokensWithdrawal(address userAddress, uint256 amount);
@@ -67,7 +69,6 @@ contract CookDistribution is Ownable {
     // Date-related constants for sanity-checking dates to reject obvious erroneous inputs
     // SECONDS_PER_DAY = 30 for test only
     uint32 private constant SECONDS_PER_DAY = 86400; /* 86400 seconds in a day */
-    uint256 MAX_INT = 2**256 - 1;
 
     uint256[] private _priceKey;
     uint256[] private _percentageValue;
@@ -87,12 +88,22 @@ contract CookDistribution is Ownable {
         address oracle_,
         address priceConsumer_
     ) public {
+        require(token_ != IERC20(0), "Cook token can not be none");
+        require(oracle_ != address(0), "Oracle address can not be zero.");
+        require(
+            priceConsumer_ != address(0),
+            "PriceConsumer address can not be zero."
+        );
+
         require(
             beneficiaries_.length == amounts_.length,
             "Length of input arrays do not match."
         );
-        require(duration > 0);
-        require(start.add((duration).mul(SECONDS_PER_DAY)) > block.timestamp);
+        require(duration > 0, "duraction should be greater than zeo");
+        require(
+            start.add((duration).mul(SECONDS_PER_DAY)) > block.timestamp,
+            "start unix time should be greater than current block timestamp"
+        );
 
         // init beneficiaries
         for (uint256 i = 0; i < beneficiaries_.length; i++) {
@@ -215,7 +226,7 @@ contract CookDistribution is Ownable {
     function getUserVestingAmount(address userAddress)
         public
         view
-        returns (uint256 amount)
+        returns (uint256)
     {
         return _beneficiaryAllocations[userAddress].amount;
     }
@@ -223,11 +234,10 @@ contract CookDistribution is Ownable {
     function getUserAvailableAmount(address userAddress, uint256 onDayOrToday)
         public
         view
-        returns (uint256 amountAvailable)
+        returns (uint256)
     {
-        uint256 onDay = _effectiveDay(onDayOrToday);
         uint256 avalible =
-            _getVestedAmount(userAddress, onDay).sub(
+            _getVestedAmount(userAddress, onDayOrToday).sub(
                 _beneficiaryAllocations[userAddress].released
             );
         return avalible;
@@ -238,8 +248,7 @@ contract CookDistribution is Ownable {
         view
         returns (uint256 amountVested)
     {
-        uint256 onDay = _effectiveDay(onDayOrToday);
-        return _getVestedAmount(userAddress, onDay);
+        return _getVestedAmount(userAddress, onDayOrToday);
     }
 
     /**
@@ -249,14 +258,14 @@ contract CookDistribution is Ownable {
         return uint256(block.timestamp / SECONDS_PER_DAY);
     }
 
-    function startDay() public view returns (uint256 dayNumber) {
+    function startDay() public view returns (uint256) {
         return uint256(_start / SECONDS_PER_DAY);
     }
 
     function _effectiveDay(uint256 onDayOrToday)
         internal
         view
-        returns (uint256 dayNumber)
+        returns (uint256)
     {
         return onDayOrToday == 0 ? today() : onDayOrToday;
     }
@@ -264,7 +273,7 @@ contract CookDistribution is Ownable {
     function _getVestedAmount(address userAddress, uint256 onDayOrToday)
         internal
         view
-        returns (uint256 amountNotVested)
+        returns (uint256)
     {
         uint256 onDay = _effectiveDay(onDayOrToday); // day
 
@@ -275,7 +284,7 @@ contract CookDistribution is Ownable {
         // If it's before the vesting then the vested amount is zero.
         else if (onDay < startDay()) {
             // All are vested (none are not vested)
-            return uint256(0);
+            return 0;
         }
         // Otherwise a fractional amount is vested.
         else {
@@ -351,7 +360,7 @@ contract CookDistribution is Ownable {
             .released
             .add(withdrawAmount);
 
-        _token.transfer(userAddress, withdrawAmount);
+        _token.safeTransfer(userAddress, withdrawAmount);
 
         emit TokensWithdrawal(userAddress, withdrawAmount);
     }
@@ -459,7 +468,7 @@ contract CookDistribution is Ownable {
     {
         // get pair address
         (uint256 wethAmount, ) = _calWethAmountToPairCook(cookAmount);
-        _token.transfer(_oracle.pairAddress(), cookAmount);
+        _token.safeTransfer(_oracle.pairAddress(), cookAmount);
 
         IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
         if (lpPair.token0() == address(_token)) {
@@ -473,7 +482,7 @@ contract CookDistribution is Ownable {
                     wethAmount,
                 "insufficient weth allowance"
             );
-            IERC20(lpPair.token1()).transferFrom(
+            IERC20(lpPair.token1()).safeTransferFrom(
                 msg.sender,
                 _oracle.pairAddress(),
                 wethAmount
@@ -489,7 +498,7 @@ contract CookDistribution is Ownable {
                     wethAmount,
                 "insufficient weth allowance"
             );
-            IERC20(lpPair.token0()).transferFrom(
+            IERC20(lpPair.token0()).safeTransferFrom(
                 msg.sender,
                 _oracle.pairAddress(),
                 wethAmount
@@ -513,7 +522,7 @@ contract CookDistribution is Ownable {
 
         // Swap ETH to WETH for user
         IWETH(wethAddress).deposit{value: msg.value}();
-        _token.transfer(_oracle.pairAddress(), cookAmount);
+        _token.safeTransfer(_oracle.pairAddress(), cookAmount);
 
         IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
         if (lpPair.token0() == address(_token)) {
@@ -522,7 +531,7 @@ contract CookDistribution is Ownable {
                 IERC20(lpPair.token1()).balanceOf(address(this)) >= wethAmount,
                 "insufficient weth balance"
             );
-            IERC20(lpPair.token1()).transferFrom(
+            IERC20(lpPair.token1()).safeTransferFrom(
                 address(this),
                 _oracle.pairAddress(),
                 wethAmount
@@ -533,7 +542,7 @@ contract CookDistribution is Ownable {
                 IERC20(lpPair.token0()).balanceOf(address(this)) >= wethAmount,
                 "insufficient weth balance"
             );
-            IERC20(lpPair.token0()).transferFrom(
+            IERC20(lpPair.token0()).safeTransferFrom(
                 address(this),
                 _oracle.pairAddress(),
                 wethAmount
@@ -577,6 +586,11 @@ contract CookDistribution is Ownable {
         address beneficiaryAddress,
         uint256 amount
     ) public onlyOwner {
+        require(
+            _beneficiaryAllocations[beneficiaryAddress].isRegistered == false,
+            "The address to be added already exisits in the distribution contact, please use a new one"
+        );
+
         _beneficiaryAllocations[beneficiaryAddress].isRegistered = true;
         _beneficiaryAllocations[beneficiaryAddress] = Allocation(
             amount,
@@ -584,12 +598,19 @@ contract CookDistribution is Ownable {
             false,
             true
         );
+
+        emit AllocationRegistered(beneficiaryAddress, amount);
     }
 
     function updatePricePercentage(
         uint256[] memory priceKey_,
         uint256[] memory percentageValue_
     ) public onlyOwner {
+        require(
+            priceKey_.length == percentageValue_.length && priceKey_.length > 0,
+            "incorrect values are provided for priceKey and percentagekey"
+        );
+
         _priceKey = priceKey_;
         _percentageValue = percentageValue_;
 
@@ -601,12 +622,7 @@ contract CookDistribution is Ownable {
     /**
      * return total vested cook amount
      */
-    function getTotalAvailable()
-        public
-        view
-        onlyOwner
-        returns (uint256 amount)
-    {
+    function getTotalAvailable() public view onlyOwner returns (uint256) {
         uint256 totalAvailable = 0;
 
         for (uint256 i = 0; i < _allBeneficiary.length; ++i) {
@@ -619,19 +635,19 @@ contract CookDistribution is Ownable {
         return totalAvailable;
     }
 
-    function getLatestSevenSMA() public onlyOwner returns (uint256 priceValue) {
+    function getLatestSevenSMA() public onlyOwner returns (uint256) {
         // 7 day sma
         uint256 priceSum = uint256(0);
         uint256 priceCount = uint256(0);
         for (uint32 i = 0; i < 7; ++i) {
-            if (_oraclePriceFeed[today() - i] != uint256(0)) {
+            if (_oraclePriceFeed[today() - i] != 0) {
                 priceSum = priceSum + _oraclePriceFeed[today() - i];
                 priceCount += 1;
             }
         }
 
         uint256 sevenSMA = 0;
-        if (priceCount == uint256(7)) {
+        if (priceCount == 7) {
             sevenSMA = priceSum.div(priceCount);
         }
         return sevenSMA;
@@ -708,6 +724,6 @@ contract CookDistribution is Ownable {
 
     // admin emergency to transfer token to owner
     function emergencyWithdraw(uint256 amount) public onlyOwner {
-        _token.transfer(msg.sender, amount);
+        _token.safeTransfer(msg.sender, amount);
     }
 }
