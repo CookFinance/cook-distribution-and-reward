@@ -109,12 +109,12 @@ contract PoolSetters is PoolState, PoolGetters {
     // Admin Functions
     // Put an evil address into blacklist
     function blacklistAddress(address addr) public onlyOwner {
-        _state.isBlacklisted[addr] = true;
+        _state.accounts[addr].isBlacklisted = true;
     }
 
     //Remove an address from blacklist
     function removeAddressFromBlacklist(address addr) public onlyOwner {
-        _state.isBlacklisted[addr] = false;
+        _state.accounts[addr].isBlacklisted = false;
     }
 
     // Pause all liquidity mining program

@@ -10,6 +10,11 @@ contract Account {
         Vesting[] vestings;
         Vesting[] stakings;
         uint256 claimed; //cook
+        // blacklisted beneficiary,
+        // 1. the address won't be able to claim/harvest/zap rewarded cook,
+        // 2. blacklisted address can withdraw their LP token immmediately
+        // 3. blacklisted address won't receive anymore rewarded cook
+        bool isBlacklisted;
     }
 }
 
@@ -45,11 +50,7 @@ contract Storage {
         // 3. stop claim/harvest/zap rewarded cook
         // 4. stop distributing cook reward
         bool pauseMinig;
-        // blacklisted beneficiary,
-        // 1. the address won't be able to claim/harvest/zap rewarded cook,
-        // 2. blacklisted address can withdraw their LP token immmediately
-        // 3. blacklisted address won't receive anymore rewarded cook
-        mapping(address => bool) isBlacklisted;
+
         // Mining cook reward per block
         uint256 REWARD_PER_BLOCK;
         // pool cap limit, 0 will be unlimited

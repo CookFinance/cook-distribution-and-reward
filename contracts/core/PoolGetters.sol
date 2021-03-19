@@ -200,7 +200,7 @@ contract PoolGetters is PoolState {
     }
 
     function isAddrBlacklisted(address addr) internal view returns (bool) {
-        return _state.isBlacklisted[addr];
+        return _state.accounts[addr].isBlacklisted;
     }
 
     function totalPoolCapLimit() public view returns (uint256) {
