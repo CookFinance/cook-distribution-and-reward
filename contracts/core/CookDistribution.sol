@@ -433,33 +433,22 @@ contract CookDistribution is Ownable {
     }
 
     function _checkValidZap(address userAddress, uint256 cookAmount) internal {
-        require(
-            _beneficiaryAllocations[userAddress].isRegistered == true,
-            "You have to be a registered address in order to release tokens."
-        );
+        require(_beneficiaryAllocations[userAddress].isRegistered == true, "You have to be a registered address in order to release tokens.");
 
         require(
             _beneficiaryAllocations[userAddress].blackListed == false,
             "Your address is blacklisted"
         );
 
-        require(
-            _pauseClaim == false,
-            "Cook token cane not be zap due to emgergency"
-        );
+        require(_pauseClaim == false, "Cook token cane not be zap due to emgergency");
 
         require(cookAmount > 0, "zero zap amount");
 
         require(
-            getUserAvailableAmount(userAddress, today()) >= cookAmount,
-            "insufficient avalible cook balance"
+            getUserAvailableAmount(userAddress, today()) >= cookAmount, "insufficient avalible cook balance"
         );
 
-        _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[
-            userAddress
-        ]
-            .released
-            .add(cookAmount);
+        _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[userAddress].released.add(cookAmount);
     }
 
     function addLiquidity(uint256 cookAmount)
@@ -473,15 +462,8 @@ contract CookDistribution is Ownable {
         IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
         if (lpPair.token0() == address(_token)) {
             // token0 == cook, token1 == weth
-            require(
-                IERC20(lpPair.token1()).balanceOf(msg.sender) >= wethAmount,
-                "insufficient weth balance"
-            );
-            require(
-                IERC20(lpPair.token1()).allowance(msg.sender, address(this)) >=
-                    wethAmount,
-                "insufficient weth allowance"
-            );
+            require(IERC20(lpPair.token1()).balanceOf(msg.sender) >= wethAmount, "insufficient weth balance");
+            require(IERC20(lpPair.token1()).allowance(msg.sender, address(this)) >= wethAmount, "insufficient weth allowance");
             IERC20(lpPair.token1()).safeTransferFrom(
                 msg.sender,
                 _oracle.pairAddress(),
@@ -489,20 +471,9 @@ contract CookDistribution is Ownable {
             );
         } else if (lpPair.token1() == address(_token)) {
             // token0 == weth, token1 == cook
-            require(
-                IERC20(lpPair.token0()).balanceOf(msg.sender) >= wethAmount,
-                "insufficient weth balance"
-            );
-            require(
-                IERC20(lpPair.token0()).allowance(msg.sender, address(this)) >=
-                    wethAmount,
-                "insufficient weth allowance"
-            );
-            IERC20(lpPair.token0()).safeTransferFrom(
-                msg.sender,
-                _oracle.pairAddress(),
-                wethAmount
-            );
+            require(IERC20(lpPair.token0()).balanceOf(msg.sender) >= wethAmount, "insufficient weth balance");
+            require(IERC20(lpPair.token0()).allowance(msg.sender, address(this)) >= wethAmount, "insufficient weth allowance");
+            IERC20(lpPair.token0()).safeTransferFrom(msg.sender, _oracle.pairAddress(), wethAmount);
         }
 
         return (wethAmount, lpPair.mint(address(this)));
@@ -515,10 +486,7 @@ contract CookDistribution is Ownable {
         (uint256 wethAmount, address wethAddress) =
             _calWethAmountToPairCook(cookAmount);
         // make sure the amount of eth == required weth amount
-        require(
-            msg.value == wethAmount,
-            "Please provide exact amount of eth needed to pair cook tokens"
-        );
+        require(msg.value == wethAmount, "Please provide exact amount of eth needed to pair cook tokens");
 
         // Swap ETH to WETH for user
         IWETH(wethAddress).deposit{value: msg.value}();
@@ -527,10 +495,7 @@ contract CookDistribution is Ownable {
         IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
         if (lpPair.token0() == address(_token)) {
             // token0 == cook, token1 == weth
-            require(
-                IERC20(lpPair.token1()).balanceOf(address(this)) >= wethAmount,
-                "insufficient weth balance"
-            );
+            require(IERC20(lpPair.token1()).balanceOf(address(this)) >= wethAmount, "insufficient weth balance");
             IERC20(lpPair.token1()).safeTransferFrom(
                 address(this),
                 _oracle.pairAddress(),
@@ -538,15 +503,8 @@ contract CookDistribution is Ownable {
             );
         } else if (lpPair.token1() == address(_token)) {
             // token0 == weth, token1 == cook
-            require(
-                IERC20(lpPair.token0()).balanceOf(address(this)) >= wethAmount,
-                "insufficient weth balance"
-            );
-            IERC20(lpPair.token0()).safeTransferFrom(
-                address(this),
-                _oracle.pairAddress(),
-                wethAmount
-            );
+            require(IERC20(lpPair.token0()).balanceOf(address(this)) >= wethAmount, "insufficient weth balance");
+            IERC20(lpPair.token0()).safeTransferFrom(address(this), _oracle.pairAddress(), wethAmount);
         }
 
         return (wethAmount, lpPair.mint(address(this)));
@@ -592,14 +550,35 @@ contract CookDistribution is Ownable {
         );
 
         _beneficiaryAllocations[beneficiaryAddress].isRegistered = true;
-        _beneficiaryAllocations[beneficiaryAddress] = Allocation(
-            amount,
-            0,
-            false,
-            true
+        _beneficiaryAllocations[beneficiaryAddress] = Allocation( amount, 0, false, true
         );
 
         emit AllocationRegistered(beneficiaryAddress, amount);
+    }
+
+    /**
+     * Add multiple address with multiple allocations
+     */
+    function addMultipleAddressWithAllocations(
+        address[] memory beneficiaryAddresses,
+        uint256[] memory amounts
+    ) public onlyOwner {
+        require(beneficiaryAddresses.length > 0 && amounts.length > 0 && beneficiaryAddresses.length == amounts.length,
+            "The length of user addressed and amounts should be matched and cannot be empty"
+        );
+
+        for (uint256 i = 0; i < beneficiaryAddresses.length; i++) {
+            require(_beneficiaryAllocations[beneficiaryAddresses[i]].isRegistered == false,
+                "The address to be added already exisits in the distribution contact, please use a new one"
+            );
+        }
+
+        for (uint256 i = 0; i < beneficiaryAddresses.length; i++) {
+            _beneficiaryAllocations[beneficiaryAddresses[i]].isRegistered = true;
+            _beneficiaryAllocations[beneficiaryAddresses[i]] = Allocation(amounts[i], 0, false, true);
+
+            emit AllocationRegistered(beneficiaryAddresses[i], amounts[i]);
+        }
     }
 
     function updatePricePercentage(

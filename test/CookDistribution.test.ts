@@ -274,6 +274,39 @@ describe("CookDistribution", () => {
       expect(await cookInstance.getUserAvailableAmount(await addr3.getAddress(), 0)).to.equal(0);
 
       expect(await cookInstance.connect(owner).getTotalAvailable()).to.equal(500);
+
+      await expect(cookInstance.connect(owner).addAddressWithAllocation(await addr3.getAddress(), "1500")).to.be.revertedWith("The address to be added already exisits in the distribution contact, please use a new one");
+    })
+
+    it("add address2 and address3 after 180 days", async () => {
+      // forward 181 days
+      await cookInstance.setToday(TODAY_DAYS + 181);
+      // add allocation for address3 and address2
+      await cookInstance.connect(owner).addMultipleAddressWithAllocations([await addr2.getAddress(), await addr3.getAddress()], ["4000", "2000"]);
+
+      expect(await cookInstance.getRegisteredStatus(await addr2.getAddress())).to.equal(true);
+      expect(await cookInstance.getUserVestingAmount(await addr2.getAddress())).to.equal(4000);
+      expect(await cookInstance.getUserAvailableAmount(await addr2.getAddress(), 0)).to.equal(2000);
+
+      expect(await cookInstance.getRegisteredStatus(await addr3.getAddress())).to.equal(true);
+      expect(await cookInstance.getUserVestingAmount(await addr3.getAddress())).to.equal(2000);
+      expect(await cookInstance.getUserAvailableAmount(await addr3.getAddress(), 0)).to.equal(1000);
+
+      await cookInstance.connect(addr1).withdraw(100);
+
+      await cookInstance.connect(addr3).withdraw(700);
+      expect(await cookInstance.getUserAvailableAmount(await addr3.getAddress(), 0)).to.equal(300);
+      await cookInstance.connect(addr3).withdraw(300);
+      expect(await cookInstance.getUserAvailableAmount(await addr3.getAddress(), 0)).to.equal(0);
+
+      await cookInstance.connect(addr2).withdraw(700);
+      expect(await cookInstance.getUserAvailableAmount(await addr2.getAddress(), 0)).to.equal(1300);
+      await cookInstance.connect(addr2).withdraw(300);
+      expect(await cookInstance.getUserAvailableAmount(await addr2.getAddress(), 0)).to.equal(1000);
+
+      expect(await cookInstance.connect(owner).getTotalAvailable()).to.equal(500);
+
+      await expect(cookInstance.connect(owner).addMultipleAddressWithAllocations([await addr3.getAddress()], ["1500"])).to.be.revertedWith("The address to be added already exisits in the distribution contact, please use a new one");
     })
   })
 
