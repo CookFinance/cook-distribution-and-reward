@@ -104,7 +104,7 @@ describe('Oracle', function () {
       "Oracle",
       owner
     );
-    oracle = (await oracleFactory.deploy(this.pairAddress, this.cook.address, this.weth.address)) as Oracle;
+    oracle = (await oracleFactory.deploy(this.pairAddress, this.cook.address)) as Oracle;
     this.oracle = await oracle.deployed();
 
 

@@ -2,6 +2,7 @@ pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "../external/UniswapV2Library.sol";
 import "./Constants.sol";
@@ -12,6 +13,7 @@ import "../oracle/IWETH.sol";
 
 contract Pool is PoolSetters, IPool {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     constructor(
         address cook,
@@ -20,6 +22,13 @@ contract Pool is PoolSetters, IPool {
         uint256 totalPoolCapLimit,
         uint256 stakeLimitPerAddress
     ) public {
+        require(cook != address(0), "Cook address can not be empty");
+        require(univ2 != address(0), "univ2 address can not be empty");
+        require(
+            cook_reward_per_block != 0,
+            "cook_reward_per_block can not be zero"
+        );
+
         _state.provider.cook = IERC20(cook); //COOK
         _state.provider.univ2 = IERC20(univ2); //univ2 pair COOK/WETH
         _state.pauseMinig = false;
@@ -47,7 +56,7 @@ contract Pool is PoolSetters, IPool {
         checkPerAddrStakeLimit(univ2Amount, msg.sender);
 
         updateStakeStates(univ2Amount, msg.sender);
-        univ2().transferFrom(msg.sender, address(this), univ2Amount);
+        univ2().safeTransferFrom(msg.sender, address(this), univ2Amount);
         uniBalanceCheck();
 
         emit Stake(msg.sender, univ2Amount);
@@ -83,7 +92,7 @@ contract Pool is PoolSetters, IPool {
         checkPerAddrStakeLimit(univ2Amount, userAddress);
 
         updateStakeStates(univ2Amount, userAddress);
-        univ2().transferFrom(msg.sender, address(this), univ2Amount);
+        univ2().safeTransferFrom(msg.sender, address(this), univ2Amount);
         uniBalanceCheck();
 
         emit ZapLP(userAddress, univ2Amount);
@@ -134,7 +143,7 @@ contract Pool is PoolSetters, IPool {
             "insufficient phantom balance"
         );
 
-        univ2().transfer(msg.sender, univ2Amount);
+        univ2().safeTransfer(msg.sender, univ2Amount);
         uniBalanceCheck();
 
         emit Unstake(msg.sender, univ2Amount);
@@ -171,7 +180,7 @@ contract Pool is PoolSetters, IPool {
             "insufficient claimable balance"
         );
 
-        cook().transfer(msg.sender, cookAmount);
+        cook().safeTransfer(msg.sender, cookAmount);
         incrementBalanceOfClaimed(msg.sender, cookAmount);
 
         emit Claim(msg.sender, cookAmount);
@@ -210,8 +219,8 @@ contract Pool is PoolSetters, IPool {
             _calWethAmountToPairCook(cookAmount);
         IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
 
-        cook().transfer(address(univ2()), cookAmount);
-        IERC20(wethAddress).transferFrom(
+        cook().safeTransfer(address(univ2()), cookAmount);
+        IERC20(wethAddress).safeTransferFrom(
             msg.sender,
             address(univ2()),
             wethAmount
@@ -236,7 +245,7 @@ contract Pool is PoolSetters, IPool {
         IWETH(wethAddress).deposit{value: msg.value}();
         cook().transfer(address(univ2()), cookAmount);
 
-        IERC20(wethAddress).transferFrom(
+        IERC20(wethAddress).safeTransferFrom(
             address(this),
             address(univ2()),
             wethAmount
@@ -298,8 +307,8 @@ contract Pool is PoolSetters, IPool {
         );
     }
 
-    // admin emergency to transfer token to owner
+    // admin emergency to safeTransfer token to owner
     function emergencyWithdraw(uint256 amount) public onlyOwner {
-        cook().transfer(msg.sender, amount);
+        cook().safeTransfer(msg.sender, amount);
     }
 }

@@ -31,11 +31,13 @@ contract Oracle is IOracle, Ownable {
     uint256 public latestPrice0;
     uint256 public latestPrice1;
 
-    constructor(
-        address _pairAddress,
-        address cookAddress,
-        address tokenB
-    ) public {
+    constructor(address _pairAddress, address cookAddress) public {
+        require(cookAddress != address(0), "Cook address can not be empty");
+        require(
+            _pairAddress != address(0),
+            "Cook pair address can not be empty"
+        );
+
         pair = IUniswapV2Pair(_pairAddress);
         pairAddress = _pairAddress;
         _cookAddress = cookAddress;

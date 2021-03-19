@@ -121,7 +121,7 @@ contract PoolGetters is PoolState {
             ) {
                 unstakable += totalStakingAmount; // If after end of staking lockup, then the unstakable amount is total amount.
             } else {
-                unstakable += uint256(0); // If it's before the staking lockup then the unstakable amount is zero.
+                unstakable += 0; // If it's before the staking lockup then the unstakable amount is zero.
             }
         }
         return unstakable;
@@ -177,7 +177,7 @@ contract PoolGetters is PoolState {
             if (today >= (startDay + vestingDuration)) {
                 claimable += totalVestingAmount; // If after end of vesting, then the vested amount is total amount.
             } else if (today <= startDay) {
-                claimable += uint256(0); // If it's before the vesting then the vested amount is zero.
+                claimable += 0; // If it's before the vesting then the vested amount is zero.
             } else {
                 // Otherwise a fractional amount is vested.
                 // Compute the exact number of days vested.

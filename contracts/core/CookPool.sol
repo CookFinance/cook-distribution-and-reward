@@ -1,6 +1,7 @@
 pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "../external/UniswapV2Library.sol";
@@ -12,6 +13,7 @@ import "../oracle/IWETH.sol";
 
 contract CookPool is PoolSetters, IPool {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     constructor(
         address cook,
@@ -19,6 +21,12 @@ contract CookPool is PoolSetters, IPool {
         uint256 totalPoolCapLimit,
         uint256 stakeLimitPerAddress
     ) public {
+        require(cook != address(0), "Cook address can not be empty");
+        require(
+            cook_reward_per_block != 0,
+            "cook_reward_per_block can not be zero"
+        );
+
         _state.provider.cook = IERC20(cook); //COOK
         _state.pauseMinig = false;
         // 2e18 is 2 cook token perblock
@@ -41,7 +49,7 @@ contract CookPool is PoolSetters, IPool {
         checkPerAddrStakeLimit(cookAmount, msg.sender);
 
         updateStakeStates(cookAmount, msg.sender);
-        cook().transferFrom(msg.sender, address(this), cookAmount);
+        cook().safeTransferFrom(msg.sender, address(this), cookAmount);
         cookBalanceCheck();
 
         emit Stake(msg.sender, cookAmount);
@@ -77,7 +85,7 @@ contract CookPool is PoolSetters, IPool {
         checkPerAddrStakeLimit(cookAmount, userAddress);
 
         updateStakeStates(cookAmount, userAddress);
-        cook().transferFrom(msg.sender, address(this), cookAmount);
+        cook().safeTransferFrom(msg.sender, address(this), cookAmount);
         cookBalanceCheck();
 
         emit ZapCook(userAddress, cookAmount);
@@ -165,7 +173,7 @@ contract CookPool is PoolSetters, IPool {
             "insufficient claimable cook balance"
         );
 
-        cook().transfer(msg.sender, cookAmount);
+        cook().safeTransfer(msg.sender, cookAmount);
         incrementBalanceOfClaimed(msg.sender, cookAmount);
 
         emit Claim(msg.sender, cookAmount);
@@ -227,6 +235,6 @@ contract CookPool is PoolSetters, IPool {
 
     // admin emergency to transfer token to owner
     function emergencyWithdraw(uint256 amount) public onlyOwner {
-        cook().transfer(msg.sender, amount);
+        cook().safeTransfer(msg.sender, amount);
     }
 }
