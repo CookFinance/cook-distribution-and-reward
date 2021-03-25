@@ -2,6 +2,8 @@ pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
 
 contract Account {
     struct State {
@@ -60,6 +62,6 @@ contract Storage {
     }
 }
 
-contract PoolState is Ownable {
+contract PoolState is Ownable, AccessControl {
     Storage.State _state;
 }

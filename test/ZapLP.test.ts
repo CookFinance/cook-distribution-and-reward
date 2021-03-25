@@ -39,7 +39,7 @@ async function latest(addtime: number = 0) {
 
 }
 
-describe("Zap", () => {
+describe("Zap Uni", () => {
   let token: MockCOOK;
   let cookInstance: MockCookDistribution;
   let oracle: Oracle;

@@ -199,7 +199,7 @@ describe("CookDistribution", () => {
     })
 
     it("Will fail for someone not owner trying to get total available", async () => {
-      await expect(cookInstance.connect(addr1).getTotalAvailable()).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(cookInstance.connect(addr1).getTotalAvailable()).to.be.revertedWith("Caller is not a manager");
     })
 
     it("has right availableBalance after withdraw + new vested", async () => {
@@ -245,7 +245,7 @@ describe("CookDistribution", () => {
     })
 
     it("others can not add allocation", async () => {
-      await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr3.getAddress(), "1500")).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr3.getAddress(), "1500")).to.be.revertedWith("Caller is not a manager");
     })
 
     it("address 2 should be registered with right amount", async () => {
@@ -331,7 +331,7 @@ describe("CookDistribution", () => {
 
     it("only owner can update price feed", async () => {
       await oracle.connect(addr1).set("5000");
-      await expect(cookInstance.connect(addr1).updatePriceFeed()).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(cookInstance.connect(addr1).updatePriceFeed()).to.be.revertedWith("Caller is not a manager");
     })
 
     it("after update price", async () => {

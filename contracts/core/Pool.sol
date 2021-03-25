@@ -36,6 +36,10 @@ contract Pool is PoolSetters, IPool {
         _state.REWARD_PER_BLOCK = cook_reward_per_block;
         _state.totalPoolCapLimit = totalPoolCapLimit;
         _state.stakeLimitPerAddress = stakeLimitPerAddress;
+        
+        // Make the deployer defaul admin role and manager role
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(MANAGER_ROLE, msg.sender);
     }
 
     event Stake(address indexed account, uint256 univ2Amount);

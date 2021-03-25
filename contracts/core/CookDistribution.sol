@@ -3,6 +3,7 @@ pragma solidity ^0.6.2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "../oracle/IOracle.sol";
@@ -17,7 +18,7 @@ import "../external/UniswapV2Library.sol";
  * @dev A token holder contract that can release its token balance gradually like a
  * typical vesting scheme, with a cliff and vesting period.
  */
-contract CookDistribution is Ownable {
+contract CookDistribution is Ownable, AccessControl {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -77,6 +78,8 @@ contract CookDistribution is Ownable {
     // Fields for Admin
     // stop everyone from claiming/zapping cook token due to emgergency
     bool private _pauseClaim;
+
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     constructor(
         IERC20 token_,
@@ -142,56 +145,17 @@ contract CookDistribution is Ownable {
         _pauseClaim = false;
 
         // init price percentage
-        _priceKey = [
-            500000,
-            800000,
-            1100000,
-            1400000,
-            1700000,
-            2000000,
-            2300000,
-            2600000,
-            2900000,
-            3200000,
-            3500000,
-            3800000,
-            4100000,
-            4400000,
-            4700000,
-            5000000,
-            5300000,
-            5600000,
-            5900000,
-            6200000,
-            6500000
-        ];
-        _percentageValue = [
-            1,
-            5,
-            10,
-            15,
-            20,
-            25,
-            30,
-            35,
-            40,
-            45,
-            50,
-            55,
-            60,
-            65,
-            70,
-            75,
-            80,
-            85,
-            90,
-            95,
-            100
-        ];
+        _priceKey = [500000, 800000, 1100000, 1400000, 1700000, 2000000, 2300000, 2600000, 2900000, 3200000, 3500000, 3800000, 4100000,
+                    4400000, 4700000, 5000000, 5300000, 5600000, 5900000, 6200000, 6500000];
+        _percentageValue = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
 
         for (uint256 i = 0; i < _priceKey.length; i++) {
             _pricePercentageMapping[_priceKey[i]] = _percentageValue[i];
         }
+
+        // Make the deployer defaul admin role and manager role
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(MANAGER_ROLE, msg.sender);
     }
 
     fallback() external payable {
@@ -215,27 +179,15 @@ contract CookDistribution is Ownable {
     /**
      * @return the registerd state.
      */
-    function getRegisteredStatus(address userAddress)
-        public
-        view
-        returns (bool)
-    {
+    function getRegisteredStatus(address userAddress) public view returns (bool) {
         return _beneficiaryAllocations[userAddress].isRegistered;
     }
 
-    function getUserVestingAmount(address userAddress)
-        public
-        view
-        returns (uint256)
-    {
+    function getUserVestingAmount(address userAddress) public view returns (uint256) {
         return _beneficiaryAllocations[userAddress].amount;
     }
 
-    function getUserAvailableAmount(address userAddress, uint256 onDayOrToday)
-        public
-        view
-        returns (uint256)
-    {
+    function getUserAvailableAmount(address userAddress, uint256 onDayOrToday) public view returns (uint256) {
         uint256 avalible =
             _getVestedAmount(userAddress, onDayOrToday).sub(
                 _beneficiaryAllocations[userAddress].released
@@ -262,19 +214,11 @@ contract CookDistribution is Ownable {
         return uint256(_start / SECONDS_PER_DAY);
     }
 
-    function _effectiveDay(uint256 onDayOrToday)
-        internal
-        view
-        returns (uint256)
-    {
+    function _effectiveDay(uint256 onDayOrToday) internal view returns (uint256) {
         return onDayOrToday == 0 ? today() : onDayOrToday;
     }
 
-    function _getVestedAmount(address userAddress, uint256 onDayOrToday)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getVestedAmount(address userAddress, uint256 onDayOrToday) internal view returns (uint256) {
         uint256 onDay = _effectiveDay(onDayOrToday); // day
 
         // If after end of vesting, then the vested amount is total amount.
@@ -365,18 +309,11 @@ contract CookDistribution is Ownable {
         emit TokensWithdrawal(userAddress, withdrawAmount);
     }
 
-    function _getPricePercentage(uint256 priceKey)
-        internal
-        view
-        returns (uint256 percentageValue)
-    {
+    function _getPricePercentage(uint256 priceKey) internal view returns (uint256) {
         return _pricePercentageMapping[priceKey];
     }
 
-    function _calWethAmountToPairCook(uint256 cookAmount)
-        internal
-        returns (uint256, address)
-    {
+    function _calWethAmountToPairCook(uint256 cookAmount) internal returns (uint256, address) {
         // get pair address
         IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
         uint256 reserve0;
@@ -400,10 +337,7 @@ contract CookDistribution is Ownable {
     }
 
     // Zap into LP staking pool functions
-    function zapLPWithEth(uint256 cookAmount, address poolAddress)
-        external
-        payable
-    {
+    function zapLPWithEth(uint256 cookAmount, address poolAddress) external payable {
         _zapLP(cookAmount, poolAddress, true);
     }
 
@@ -411,11 +345,7 @@ contract CookDistribution is Ownable {
         _zapLP(cookAmount, poolAddress, false);
     }
 
-    function _zapLP(
-        uint256 cookAmount,
-        address poolAddress,
-        bool isWithEth
-    ) internal {
+    function _zapLP(uint256 cookAmount, address poolAddress, bool isWithEth) internal {
         address userAddress = msg.sender;
         _checkValidZap(userAddress, cookAmount);
 
@@ -451,10 +381,7 @@ contract CookDistribution is Ownable {
         _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[userAddress].released.add(cookAmount);
     }
 
-    function addLiquidity(uint256 cookAmount)
-        internal
-        returns (uint256, uint256)
-    {
+    function addLiquidity(uint256 cookAmount) internal returns (uint256, uint256) {
         // get pair address
         (uint256 wethAmount, ) = _calWethAmountToPairCook(cookAmount);
         _token.safeTransfer(_oracle.pairAddress(), cookAmount);
@@ -479,10 +406,7 @@ contract CookDistribution is Ownable {
         return (wethAmount, lpPair.mint(address(this)));
     }
 
-    function addLiquidityWithEth(uint256 cookAmount)
-        internal
-        returns (uint256, uint256)
-    {
+    function addLiquidityWithEth(uint256 cookAmount) internal returns (uint256, uint256) {
         (uint256 wethAmount, address wethAddress) =
             _calWethAmountToPairCook(cookAmount);
         // make sure the amount of eth == required weth amount
@@ -511,10 +435,7 @@ contract CookDistribution is Ownable {
     }
 
     // Zap into Cook staking pool functions
-    function zapCook(uint256 cookAmount, address cookPoolAddress)
-        external
-        payable
-    {
+    function zapCook(uint256 cookAmount, address cookPoolAddress) external {
         address userAddress = msg.sender;
         _checkValidZap(userAddress, cookAmount);
         IERC20(address(_token)).approve(cookPoolAddress, cookAmount);
@@ -522,28 +443,27 @@ contract CookDistribution is Ownable {
     }
 
     // Admin Functions
-    function setPriceBasedMaxStep(uint32 newMaxPriceBasedStep)
-        public
-        onlyOwner
-    {
+    function setPriceBasedMaxStep(uint32 newMaxPriceBasedStep) public {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
         _maxPriceUnlockMoveStep = newMaxPriceBasedStep;
     }
 
-    function getPriceBasedMaxSetp() public view onlyOwner returns (uint32) {
+    function getPriceBasedMaxSetp() public view returns (uint32) {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
         return _maxPriceUnlockMoveStep;
     }
 
-    function getNextPriceUnlockStep() public view onlyOwner returns (uint32) {
+    function getNextPriceUnlockStep() public view returns (uint32) {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
         return _nextPriceUnlockStep;
     }
 
     /**
      * add adddress with allocation
      */
-    function addAddressWithAllocation(
-        address beneficiaryAddress,
-        uint256 amount
-    ) public onlyOwner {
+    function addAddressWithAllocation(address beneficiaryAddress, uint256 amount ) public  {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+
         require(
             _beneficiaryAllocations[beneficiaryAddress].isRegistered == false,
             "The address to be added already exisits in the distribution contact, please use a new one"
@@ -559,10 +479,9 @@ contract CookDistribution is Ownable {
     /**
      * Add multiple address with multiple allocations
      */
-    function addMultipleAddressWithAllocations(
-        address[] memory beneficiaryAddresses,
-        uint256[] memory amounts
-    ) public onlyOwner {
+    function addMultipleAddressWithAllocations(address[] memory beneficiaryAddresses, uint256[] memory amounts) public {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+
         require(beneficiaryAddresses.length > 0 && amounts.length > 0 && beneficiaryAddresses.length == amounts.length,
             "The length of user addressed and amounts should be matched and cannot be empty"
         );
@@ -581,10 +500,9 @@ contract CookDistribution is Ownable {
         }
     }
 
-    function updatePricePercentage(
-        uint256[] memory priceKey_,
-        uint256[] memory percentageValue_
-    ) public onlyOwner {
+    function updatePricePercentage(uint256[] memory priceKey_, uint256[] memory percentageValue_) public {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+
         require(
             priceKey_.length == percentageValue_.length && priceKey_.length > 0,
             "incorrect values are provided for priceKey and percentagekey"
@@ -601,8 +519,8 @@ contract CookDistribution is Ownable {
     /**
      * return total vested cook amount
      */
-    function getTotalAvailable() public view onlyOwner returns (uint256) {
-        uint256 totalAvailable = 0;
+    function getTotalAvailable() public view returns (uint256) {uint256 totalAvailable = 0;
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
 
         for (uint256 i = 0; i < _allBeneficiary.length; ++i) {
             totalAvailable += getUserAvailableAmount(
@@ -614,7 +532,9 @@ contract CookDistribution is Ownable {
         return totalAvailable;
     }
 
-    function getLatestSevenSMA() public onlyOwner returns (uint256) {
+    function getLatestSevenSMA() public returns (uint256) {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+
         // 7 day sma
         uint256 priceSum = uint256(0);
         uint256 priceCount = uint256(0);
@@ -635,7 +555,9 @@ contract CookDistribution is Ownable {
     /**
      * update price feed and update price-based unlock percentage
      */
-    function updatePriceFeed() public onlyOwner {
+    function updatePriceFeed() public {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+
         // oracle capture -> 900000000000000000 -> 1 cook = 0.9 ETH
         uint256 cookPrice = _oracle.update();
 
@@ -682,22 +604,26 @@ contract CookDistribution is Ownable {
     }
 
     // Put an evil address into blacklist
-    function blacklistAddress(address userAddress) public onlyOwner {
+    function blacklistAddress(address userAddress) public {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
         _beneficiaryAllocations[userAddress].blackListed = true;
     }
 
     //Remove an address from blacklist
-    function removeAddressFromBlacklist(address userAddress) public onlyOwner {
+    function removeAddressFromBlacklist(address userAddress) public {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
         _beneficiaryAllocations[userAddress].blackListed = false;
     }
 
     // Pause all claim due to emergency
-    function pauseClaim() public onlyOwner {
+    function pauseClaim() public {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
         _pauseClaim = true;
     }
 
     // resume cliamable
-    function resumeCliam() public onlyOwner {
+    function resumeCliam() public {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
         _pauseClaim = false;
     }
 

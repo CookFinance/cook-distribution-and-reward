@@ -37,7 +37,7 @@ async function latest(addtime: number = 0) {
 
 }
 
-describe("Zap", () => {
+describe("Zap Cook", () => {
   let token: MockCOOK;
   let cookInstance: MockCookDistribution;
   let oracle: Oracle;
@@ -178,18 +178,6 @@ describe("Zap", () => {
       expect(await this.cookPool.balanceOfStaked(await addr1.getAddress())).to.be.equal('100000000000000000000');
     });
 
-    // it('insufficient weth', async function () {
-    //   await this.cookDistribution.setToday(TODAY_DAYS+61);
-    //   expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal('200000000000000000000');
-    //   await expect(this.cookDistribution.connect(addr1).zapCook('200000000000000000000',this.cookPool.address)).to.be.revertedWith("insufficient weth balance");
-    // });
-
-    // it('insufficient weth allowance', async function () {
-    //   await this.cookDistribution.setToday(TODAY_DAYS+61);
-    //   expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(),0)).to.equal('200000000000000000000');
-    //   await expect(this.cookDistribution.connect(addr1).zapCook('200000000000000000000',this.cookPool.address)).to.be.revertedWith("insufficient weth allowance");
-    // });
-
     it('blacklist or pause claim', async function () {
       await this.cookDistribution.setToday(TODAY_DAYS + 61);
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal('200000000000000000000');
@@ -236,8 +224,7 @@ describe("Zap", () => {
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal('100000000000000000000');
       expect(await this.cookPool.balanceOfStaked(await addr1.getAddress())).to.be.equal('200000000000000000000');
 
-      let overrides = { value: ethers.utils.parseEther("0.01"), gasLimit: 600000 }
-      let txn = await this.cookDistribution.connect(addr1).zapCook('100000000000000000000', this.cookPool.address, overrides);
+      await this.cookDistribution.connect(addr1).zapCook('100000000000000000000', this.cookPool.address);
 
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal('0');
       expect(await this.cookPool.balanceOfStaked(await addr1.getAddress())).to.be.equal('300000000000000000000');
