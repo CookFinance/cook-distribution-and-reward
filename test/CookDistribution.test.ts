@@ -137,7 +137,6 @@ describe("CookDistribution", () => {
       await expect(cookInstance.connect(addr1).addMultipleAddressWithAllocations([await addr2.getAddress()], [2000])).to.be.reverted;
       await expect(cookInstance.connect(addr1).updatePricePercentage([10], [2000])).to.be.reverted;
       await expect(cookInstance.connect(addr1).getTotalAvailable()).to.be.reverted;
-      await expect(cookInstance.connect(addr1).getLatestSevenSMA()).to.be.reverted;
       await expect(cookInstance.connect(addr1).updatePriceFeed()).to.be.reverted;
       await expect(cookInstance.connect(addr1).blacklistAddress(await addr2.getAddress())).to.be.reverted;
       await expect(cookInstance.connect(addr1).removeAddressFromBlacklist(await addr2.getAddress())).to.be.reverted;

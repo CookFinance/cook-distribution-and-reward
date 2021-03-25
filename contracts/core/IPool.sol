@@ -22,9 +22,9 @@ abstract contract IPool {
 
     function unstake(uint256 value) external virtual;
 
-    function harvest(uint256 value) external virtual;
+    function harvest(uint256 value) public virtual;
 
-    function claim(uint256 value) external virtual;
+    function claim(uint256 value) public virtual;
 
     function zapStake(uint256 value, address userAddress) external virtual;
 }

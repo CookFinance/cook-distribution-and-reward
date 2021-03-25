@@ -535,8 +535,6 @@ contract CookDistribution is Ownable, AccessControl {
     }
 
     function getLatestSevenSMA() public returns (uint256) {
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
-
         // 7 day sma
         uint256 priceSum = uint256(0);
         uint256 priceCount = uint256(0);

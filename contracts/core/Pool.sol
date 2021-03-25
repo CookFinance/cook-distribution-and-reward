@@ -154,7 +154,7 @@ contract Pool is PoolSetters, IPool {
         emit Unstake(msg.sender, univ2Amount);
     }
 
-    function harvest(uint256 cookAmount) external override {
+    function harvest(uint256 cookAmount) public override {
         ensureAddrNotBlacklisted(msg.sender);
 
         require(cookAmount > 0, "zero harvest amount");
@@ -175,7 +175,7 @@ contract Pool is PoolSetters, IPool {
         emit Harvest(msg.sender, cookAmount);
     }
 
-    function claim(uint256 cookAmount) external override {
+    function claim(uint256 cookAmount) public override {
         ensureAddrNotBlacklisted(msg.sender);
 
         require(cookAmount > 0, "zero claim amount");
@@ -189,6 +189,11 @@ contract Pool is PoolSetters, IPool {
         incrementBalanceOfClaimed(msg.sender, cookAmount);
 
         emit Claim(msg.sender, cookAmount);
+    }
+
+    function harvestAndClaim(uint256 cookAmount) public {
+        harvest(cookAmount);
+        claim(cookAmount);
     }
 
     function _calWethAmountToPairCook(uint256 cookAmount)

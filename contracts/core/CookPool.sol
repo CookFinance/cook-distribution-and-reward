@@ -147,7 +147,7 @@ contract CookPool is PoolSetters, IPool {
         emit Unstake(msg.sender, cookAmount);
     }
 
-    function harvest(uint256 cookAmount) external override {
+    function harvest(uint256 cookAmount) public override {
         ensureAddrNotBlacklisted(msg.sender);
 
         require(cookAmount > 0, "zero harvest amount");
@@ -168,7 +168,7 @@ contract CookPool is PoolSetters, IPool {
         emit Harvest(msg.sender, cookAmount);
     }
 
-    function claim(uint256 cookAmount) external override {
+    function claim(uint256 cookAmount) public override {
         ensureAddrNotBlacklisted(msg.sender);
 
         require(cookAmount > 0, "zero claim cook amount");

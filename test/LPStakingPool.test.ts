@@ -491,6 +491,20 @@ describe("Pool", function () {
         await this.pool.connect(userA).harvest(harvestAmount);
         expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(harvestAmount);
       });
+
+      it('all the rewards should be harvest and claim within one transaction', async function() {
+        const newBlockNumber = 60;
+        const newStakeAmount = 5;
+        await this.pool.setBlockNumber(newBlockNumber);
+        await this.pool.connect(userA).stake(newStakeAmount);
+
+        let expectedReward = (newBlockNumber - initialBlockNumber) * REWARD_PER_BLOCK;
+        expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
+
+        await this.pool.setBlockTimestamp(initialTimestamp);
+        await this.pool.connect(userA).harvestAndClaim(expectedReward);
+        expect(await this.pool.balanceOfClaimed(addrUserA)).to.be.equal(expectedReward);
+      })
     });
 
     describe('With vesting duration', function () {
