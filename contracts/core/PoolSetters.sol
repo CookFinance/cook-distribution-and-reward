@@ -8,8 +8,6 @@ import "hardhat/console.sol";
 contract PoolSetters is PoolState, PoolGetters {
     using SafeMath for uint256;
 
-    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
-    
     /**
      * Global
      */

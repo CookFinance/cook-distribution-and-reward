@@ -202,6 +202,21 @@ describe("Pool", function () {
         expect(await this.cook.balanceOf(poolInstance.address)).to.be.equal(0);
       })
 
+      it('Access control', async function () {
+        await expect(poolInstance.connect(userA).blacklistAddress(await userB.getAddress())).to.be.reverted;
+        await expect(poolInstance.connect(userA).removeAddressFromBlacklist(await userB.getAddress())).to.be.reverted;
+        await expect(poolInstance.connect(userA).pauseMinigReward()).to.be.reverted;
+        await expect(poolInstance.connect(userA).resumeMiningReward(1)).to.be.reverted;
+        await expect(poolInstance.connect(userA).setRewardPerBlock(1)).to.be.reverted;
+        await expect(poolInstance.connect(userA).setTotalPoolCapLimit(100)).to.be.reverted;
+        await expect(poolInstance.connect(userA).setStakeLimitPerAddress(100)).to.be.reverted;
+
+        await expect(poolInstance.connect(userA).grantRole(await poolInstance.MANAGER_ROLE(), await userB.getAddress())).to.be.reverted;
+        await expect(poolInstance.connect(userA).grantRole(await poolInstance.ADMIN_ROLE(), await userB.getAddress())).to.be.reverted;
+        await poolInstance.connect(owner).grantRole(await poolInstance.MANAGER_ROLE(), await userA.getAddress())
+        poolInstance.connect(userA).pauseMinigReward()
+      })
+
     });
 
     describe('Without approve', function () {

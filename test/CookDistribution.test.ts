@@ -112,8 +112,44 @@ describe("CookDistribution", () => {
       await cookInstance.setToday(TODAY_DAYS + 30);
       expect(await cookInstance.today()).to.equal(TODAY_DAYS + 30);
     })
+  })
 
+  describe("Access Controll", () => {
+    beforeEach(async () => {
 
+      const cookDistributionFactory = await ethers.getContractFactory(
+        "MockCookDistribution",
+        owner
+      );
+
+      cookInstance = (await cookDistributionFactory.deploy(token.address, [address1], [1200], adjustStartDate, 360, 30, oracle.address, priceConsumer.address)) as MockCookDistribution;
+      await cookInstance.deployed();
+
+      // transfer from owner to contract
+      await token.transfer(cookInstance.address, '1000000');
+    })
+
+    it("grant manager role to an address", async () => {
+      await expect(cookInstance.connect(addr1).setPriceBasedMaxStep(1000)).to.be.reverted;
+      await expect(cookInstance.connect(addr1).getPriceBasedMaxSetp()).to.be.reverted;
+      await expect(cookInstance.connect(addr1).getNextPriceUnlockStep()).to.be.reverted;
+      await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr2.getAddress(), 2000)).to.be.reverted;
+      await expect(cookInstance.connect(addr1).addMultipleAddressWithAllocations([await addr2.getAddress()], [2000])).to.be.reverted;
+      await expect(cookInstance.connect(addr1).updatePricePercentage([10], [2000])).to.be.reverted;
+      await expect(cookInstance.connect(addr1).getTotalAvailable()).to.be.reverted;
+      await expect(cookInstance.connect(addr1).getLatestSevenSMA()).to.be.reverted;
+      await expect(cookInstance.connect(addr1).updatePriceFeed()).to.be.reverted;
+      await expect(cookInstance.connect(addr1).blacklistAddress(await addr2.getAddress())).to.be.reverted;
+      await expect(cookInstance.connect(addr1).removeAddressFromBlacklist(await addr2.getAddress())).to.be.reverted;
+      await expect(cookInstance.connect(addr1).pauseClaim()).to.be.reverted;
+      await expect(cookInstance.connect(addr1).resumeCliam()).to.be.reverted;
+
+      await expect(cookInstance.connect(addr1).grantRole(await cookInstance.MANAGER_ROLE(), await addr2.getAddress())).to.be.reverted; 
+      await expect(cookInstance.connect(addr1).grantRole(await cookInstance.ADMIN_ROLE(), await addr2.getAddress())).to.be.reverted; 
+      await cookInstance.connect(owner).grantRole(await cookInstance.MANAGER_ROLE(), await addr1.getAddress())
+      cookInstance.connect(addr1).pauseClaim()
+      cookInstance.connect(addr1).resumeCliam()
+    })
   })
 
   describe("Vesting", () => {

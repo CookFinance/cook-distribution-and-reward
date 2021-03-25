@@ -35,8 +35,9 @@ contract CookPool is PoolSetters, IPool {
         _state.stakeLimitPerAddress = stakeLimitPerAddress;
 
         // Make the deployer defaul admin role and manager role
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(MANAGER_ROLE, ADMIN_ROLE);
     }
 
     event Stake(address indexed account, uint256 cookAmount);

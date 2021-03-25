@@ -156,6 +156,20 @@ describe("CookPool", function () {
         expect(await this.cook.balanceOf(cookPoolInstance.address)).to.be.equal(0);
       })
 
+      it('Access control', async function () {
+        await expect(cookPoolInstance.connect(userA).blacklistAddress(await userB.getAddress())).to.be.reverted;
+        await expect(cookPoolInstance.connect(userA).removeAddressFromBlacklist(await userB.getAddress())).to.be.reverted;
+        await expect(cookPoolInstance.connect(userA).pauseMinigReward()).to.be.reverted;
+        await expect(cookPoolInstance.connect(userA).resumeMiningReward(1)).to.be.reverted;
+        await expect(cookPoolInstance.connect(userA).setRewardPerBlock(1)).to.be.reverted;
+        await expect(cookPoolInstance.connect(userA).setTotalPoolCapLimit(100)).to.be.reverted;
+        await expect(cookPoolInstance.connect(userA).setStakeLimitPerAddress(100)).to.be.reverted;
+
+        await expect(cookPoolInstance.connect(userA).grantRole(await cookPoolInstance.MANAGER_ROLE(), await userB.getAddress())).to.be.reverted;
+        await expect(cookPoolInstance.connect(userA).grantRole(await cookPoolInstance.ADMIN_ROLE(), await userB.getAddress())).to.be.reverted;
+        await cookPoolInstance.connect(owner).grantRole(await cookPoolInstance.MANAGER_ROLE(), await userA.getAddress())
+        cookPoolInstance.connect(userA).pauseMinigReward()
+      })
     });
 
     describe('Without approve', function () {

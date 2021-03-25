@@ -79,7 +79,8 @@ contract CookDistribution is Ownable, AccessControl {
     // stop everyone from claiming/zapping cook token due to emgergency
     bool private _pauseClaim;
 
-    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER");
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN");
 
     constructor(
         IERC20 token_,
@@ -154,8 +155,9 @@ contract CookDistribution is Ownable, AccessControl {
         }
 
         // Make the deployer defaul admin role and manager role
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(MANAGER_ROLE, ADMIN_ROLE);
     }
 
     fallback() external payable {
@@ -630,5 +632,9 @@ contract CookDistribution is Ownable, AccessControl {
     // admin emergency to transfer token to owner
     function emergencyWithdraw(uint256 amount) public onlyOwner {
         _token.safeTransfer(msg.sender, amount);
+    }
+
+    function getManagerRole() public returns (bytes32) {
+        return MANAGER_ROLE;
     }
 }

@@ -63,5 +63,7 @@ contract Storage {
 }
 
 contract PoolState is Ownable, AccessControl {
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER");
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN");
     Storage.State _state;
 }
