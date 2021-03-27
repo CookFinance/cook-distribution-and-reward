@@ -316,6 +316,7 @@ describe("CookDistribution", () => {
     it("add address2 and address3 after 180 days", async () => {
       // forward 181 days
       await cookInstance.setToday(TODAY_DAYS + 181);
+      await expect(cookInstance.connect(owner).addMultipleAddressWithAllocations([await addr2.getAddress(), await addr2.getAddress()], ["4000", "2000"])).to.be.revertedWith("The address to be added already exisits in the distribution contact, please use a new one");
       // add allocation for address3 and address2
       await cookInstance.connect(owner).addMultipleAddressWithAllocations([await addr2.getAddress(), await addr3.getAddress()], ["4000", "2000"]);
 

@@ -492,9 +492,6 @@ contract CookDistribution is Ownable, AccessControl {
             require(_beneficiaryAllocations[beneficiaryAddresses[i]].isRegistered == false,
                 "The address to be added already exisits in the distribution contact, please use a new one"
             );
-        }
-
-        for (uint256 i = 0; i < beneficiaryAddresses.length; i++) {
             _beneficiaryAllocations[beneficiaryAddresses[i]].isRegistered = true;
             _beneficiaryAllocations[beneficiaryAddresses[i]] = Allocation(amounts[i], 0, false, true);
 
