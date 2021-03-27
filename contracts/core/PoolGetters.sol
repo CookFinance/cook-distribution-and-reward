@@ -199,6 +199,10 @@ contract PoolGetters is PoolState {
         return _state.pauseMinig;
     }
 
+    function isFull() public view returns (bool) {
+        return _state.totalPoolCapLimit != 0 && _state.balance.staked >= _state.totalPoolCapLimit;
+    }
+
     function isAddrBlacklisted(address addr) internal view returns (bool) {
         return _state.accounts[addr].isBlacklisted;
     }

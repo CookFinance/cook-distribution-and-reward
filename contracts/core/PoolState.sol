@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Account {
     struct State {
-        uint256 staked; //LP
+        uint256 staked; //LP or cook
         uint256 phantom;
         Vesting[] vestings;
         Vesting[] stakings;

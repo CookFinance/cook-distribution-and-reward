@@ -694,15 +694,26 @@ describe("CookPool", function () {
       });
 
       it('Cap limit', async function () {
+        console.log('start')
         await cookPoolInstance.connect(owner).setTotalPoolCapLimit(1);
         await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount / 2)).to.be.revertedWith('The amount to be staked will exceed pool limit');
+        await expect(cookPoolInstance.connect(userA).stake(initialHarvestAmount / 2)).to.be.revertedWith('The amount to be staked will exceed pool limit');        
 
-        await cookPoolInstance.connect(owner).setTotalPoolCapLimit(initialHarvestAmount * 2);
+        await cookPoolInstance.connect(owner).setTotalPoolCapLimit(15 + initialHarvestAmount / 2);
+        expect(await cookPoolInstance.connect(userA).isFull()).to.be.equal(false);
+
+        await cookPoolInstance.connect(owner).setTotalPoolCapLimit(0);
+        expect(await cookPoolInstance.connect(userA).isFull()).to.be.equal(false);
+
         await cookPoolInstance.connect(owner).setStakeLimitPerAddress(1);
-        await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount / 2)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
+        await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount / 4)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
+        await expect(cookPoolInstance.connect(userA).stake(initialHarvestAmount / 4)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
 
-        await cookPoolInstance.connect(owner).setStakeLimitPerAddress(initialHarvestAmount * 2);
+        await cookPoolInstance.connect(owner).setStakeLimitPerAddress(15 + initialHarvestAmount / 2);
         await this.cookPool.connect(userA).zapCook(initialHarvestAmount / 2);
+
+        await cookPoolInstance.connect(owner).setTotalPoolCapLimit(15 + initialHarvestAmount / 2);
+        expect(await cookPoolInstance.connect(userA).isFull()).to.be.equal(true);
       });
 
       it('should not be able to zap zero or negative cook amount', async function () {
