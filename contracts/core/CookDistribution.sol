@@ -315,7 +315,7 @@ contract CookDistribution is Ownable, AccessControl {
         return _pricePercentageMapping[priceKey];
     }
 
-    function _calWethAmountToPairCook(uint256 cookAmount) internal returns (uint256, address) {
+    function calWethAmountToPairCook(uint256 cookAmount) public view returns (uint256, address) {
         // get pair address
         IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
         uint256 reserve0;
@@ -339,24 +339,26 @@ contract CookDistribution is Ownable, AccessControl {
     }
 
     // Zap into LP staking pool functions
-    function zapLPWithEth(uint256 cookAmount, address poolAddress) external payable {
-        _zapLP(cookAmount, poolAddress, true);
+    function zapLPWithEth(uint256 cookAmount, uint256 maxETH, address poolAddress, uint256 deadline) external payable {
+        _zapLP(cookAmount, maxETH, poolAddress, deadline, true);
     }
 
-    function zapLP(uint256 cookAmount, address poolAddress) external {
-        _zapLP(cookAmount, poolAddress, false);
+    function zapLP(uint256 cookAmount, uint256 maxETH, address poolAddress, uint256 deadline) external {
+        _zapLP(cookAmount, maxETH, poolAddress, deadline, false);
     }
 
-    function _zapLP(uint256 cookAmount, address poolAddress, bool isWithEth) internal {
+    function _zapLP(uint256 cookAmount, uint256 maxETH, address , uint256 deadline, bool isWithEth) internal {
+        require(deadline >= block.timestamp, "CookDistribution: EXPIRED");
+
         address userAddress = msg.sender;
         _checkValidZap(userAddress, cookAmount);
 
         uint256 newUniv2 = 0;
 
         if (isWithEth) {
-            (, newUniv2) = addLiquidityWithEth(cookAmount);
+            (, newUniv2) = addLiquidityWithEth(cookAmount, maxETH);
         } else {
-            (, newUniv2) = addLiquidity(cookAmount);
+            (, newUniv2) = addLiquidity(cookAmount, maxETH);
         }
 
         IERC20(_oracle.pairAddress()).approve(poolAddress, newUniv2);
@@ -383,9 +385,11 @@ contract CookDistribution is Ownable, AccessControl {
         _beneficiaryAllocations[userAddress].released = _beneficiaryAllocations[userAddress].released.add(cookAmount);
     }
 
-    function addLiquidity(uint256 cookAmount) internal returns (uint256, uint256) {
+    function addLiquidity(uint256 cookAmount, uint256 maxETH) internal returns (uint256, uint256) {
         // get pair address
-        (uint256 wethAmount, ) = _calWethAmountToPairCook(cookAmount);
+        (uint256 wethAmount, ) = calWethAmountToPairCook(cookAmount);
+        require(maxETH >= wethAmount, "CookDistribution: Limit exceed");
+
         _token.safeTransfer(_oracle.pairAddress(), cookAmount);
 
         IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
@@ -408,14 +412,14 @@ contract CookDistribution is Ownable, AccessControl {
         return (wethAmount, lpPair.mint(address(this)));
     }
 
-    function addLiquidityWithEth(uint256 cookAmount) internal returns (uint256, uint256) {
+    function addLiquidityWithEth(uint256 cookAmount, uint256 maxETH) internal returns (uint256, uint256) {
         (uint256 wethAmount, address wethAddress) =
-            _calWethAmountToPairCook(cookAmount);
-        // make sure the amount of eth == required weth amount
-        require(msg.value == wethAmount, "Please provide exact amount of eth needed to pair cook tokens");
+            calWethAmountToPairCook(cookAmount);
+        require(maxETH >= wethAmount, "CookDistribution: Limit exceed");
+        require(msg.value >= wethAmount, "Please provide sufficient amount of eth needed to pair cook tokens");
 
         // Swap ETH to WETH for user
-        IWETH(wethAddress).deposit{value: msg.value}();
+        IWETH(wethAddress).deposit{value: wethAmount}();
         _token.safeTransfer(_oracle.pairAddress(), cookAmount);
 
         IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
@@ -433,7 +437,16 @@ contract CookDistribution is Ownable, AccessControl {
             IERC20(lpPair.token0()).safeTransferFrom(address(this), _oracle.pairAddress(), wethAmount);
         }
 
+        if (msg.value > wethAmount) {
+            _safeTransferETH(msg.sender, msg.value.sub(wethAmount));
+        }
+
         return (wethAmount, lpPair.mint(address(this)));
+    }
+
+    function _safeTransferETH(address to, uint256 value) internal {
+        (bool success, ) = to.call{value: value}(new bytes(0));
+        require(success, 'CookDistribution: ETH transfer failed');
     }
 
     // Zap into Cook staking pool functions
@@ -492,6 +505,9 @@ contract CookDistribution is Ownable, AccessControl {
             require(_beneficiaryAllocations[beneficiaryAddresses[i]].isRegistered == false,
                 "The address to be added already exisits in the distribution contact, please use a new one"
             );
+        }
+
+        for (uint256 i = 0; i < beneficiaryAddresses.length; i++) {
             _beneficiaryAllocations[beneficiaryAddresses[i]].isRegistered = true;
             _beneficiaryAllocations[beneficiaryAddresses[i]] = Allocation(amounts[i], 0, false, true);
 

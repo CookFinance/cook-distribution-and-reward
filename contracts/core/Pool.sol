@@ -36,7 +36,7 @@ contract Pool is PoolSetters, IPool {
         _state.REWARD_PER_BLOCK = cook_reward_per_block;
         _state.totalPoolCapLimit = totalPoolCapLimit;
         _state.stakeLimitPerAddress = stakeLimitPerAddress;
-        
+
         // Make the deployer defaul admin role and manager role
         _setupRole(MANAGER_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
@@ -196,8 +196,9 @@ contract Pool is PoolSetters, IPool {
         claim(cookAmount);
     }
 
-    function _calWethAmountToPairCook(uint256 cookAmount)
-        internal
+    function calWethAmountToPairCook(uint256 cookAmount)
+        public
+        view
         returns (uint256, address)
     {
         IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
@@ -221,12 +222,14 @@ contract Pool is PoolSetters, IPool {
         return (wethAmount, weth);
     }
 
-    function addLiquidity(uint256 cookAmount)
+    function addLiquidity(uint256 cookAmount, uint256 maxETH)
         internal
         returns (uint256, uint256)
     {
         (uint256 wethAmount, address wethAddress) =
-            _calWethAmountToPairCook(cookAmount);
+            calWethAmountToPairCook(cookAmount);
+        require(maxETH >= wethAmount, "Pool: Limit exceed");
+
         IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
 
         cook().safeTransfer(address(univ2()), cookAmount);
@@ -238,21 +241,22 @@ contract Pool is PoolSetters, IPool {
         return (wethAmount, lpPair.mint(address(this)));
     }
 
-    function addLiquidityWithEth(uint256 cookAmount)
+    function addLiquidityWithEth(uint256 cookAmount, uint256 maxETH)
         internal
         returns (uint256, uint256)
     {
         (uint256 wethAmount, address wethAddress) =
-            _calWethAmountToPairCook(cookAmount);
+            calWethAmountToPairCook(cookAmount);
 
+        require(maxETH >= wethAmount, "Pool: Limit exceed");
         require(
-            msg.value == wethAmount,
-            "Please provide exact amount of eth needed to pair cook tokens"
+            msg.value >= wethAmount,
+            "Please provide sufficient amount of eth needed to pair cook tokens"
         );
         IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
 
         // Swap ETH to WETH for user
-        IWETH(wethAddress).deposit{value: msg.value}();
+        IWETH(wethAddress).deposit{value: wethAmount}();
         cook().transfer(address(univ2()), cookAmount);
 
         IERC20(wethAddress).safeTransferFrom(
@@ -261,10 +265,25 @@ contract Pool is PoolSetters, IPool {
             wethAmount
         );
 
+        if (msg.value > wethAmount) {
+            _safeTransferETH(msg.sender, msg.value.sub(wethAmount));
+        }
+
         return (wethAmount, lpPair.mint(address(this)));
     }
 
-    function _zapLP(uint256 cookAmount, bool isWithEth) internal {
+    function _safeTransferETH(address to, uint256 value) internal {
+        (bool success, ) = to.call{value: value}(new bytes(0));
+        require(success, "Pool: ETH transfer failed");
+    }
+
+    function _zapLP(
+        uint256 cookAmount,
+        uint256 maxETH,
+        uint256 deadline,
+        bool isWithEth
+    ) internal {
+        require(deadline >= block.timestamp, "Pool: EXPIRED");
         require(cookAmount > 0, "zero zap amount");
 
         require(
@@ -279,9 +298,9 @@ contract Pool is PoolSetters, IPool {
         uint256 newUniv2 = 0;
 
         if (isWithEth) {
-            (lessWeth, newUniv2) = addLiquidityWithEth(cookAmount);
+            (lessWeth, newUniv2) = addLiquidityWithEth(cookAmount, maxETH);
         } else {
-            (lessWeth, newUniv2) = addLiquidity(cookAmount);
+            (lessWeth, newUniv2) = addLiquidity(cookAmount, maxETH);
         }
 
         checkPoolStakeCapLimit(newUniv2);
@@ -294,12 +313,20 @@ contract Pool is PoolSetters, IPool {
         emit ZapLP(msg.sender, newUniv2);
     }
 
-    function zapLP(uint256 cookAmount) external {
-        _zapLP(cookAmount, false);
+    function zapLP(
+        uint256 cookAmount,
+        uint256 maxETH,
+        uint256 deadline
+    ) external {
+        _zapLP(cookAmount, maxETH, deadLine, false);
     }
 
-    function zapLPWithEth(uint256 cookAmount) external payable {
-        _zapLP(cookAmount, true);
+    function zapLPWithEth(
+        uint256 cookAmount,
+        uint256 maxETH,
+        uint256 deadline
+    ) external payable {
+        _zapLP(cookAmount, maxETH, deadLine, true);
     }
 
     function uniBalanceCheck() private view {
