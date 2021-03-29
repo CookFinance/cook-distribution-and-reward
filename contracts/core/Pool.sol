@@ -318,7 +318,7 @@ contract Pool is PoolSetters, IPool {
         uint256 maxETH,
         uint256 deadline
     ) external {
-        _zapLP(cookAmount, maxETH, deadLine, false);
+        _zapLP(cookAmount, maxETH, deadline, false);
     }
 
     function zapLPWithEth(
@@ -326,7 +326,7 @@ contract Pool is PoolSetters, IPool {
         uint256 maxETH,
         uint256 deadline
     ) external payable {
-        _zapLP(cookAmount, maxETH, deadLine, true);
+        _zapLP(cookAmount, maxETH, deadline, true);
     }
 
     function uniBalanceCheck() private view {

@@ -347,7 +347,7 @@ contract CookDistribution is Ownable, AccessControl {
         _zapLP(cookAmount, maxETH, poolAddress, deadline, false);
     }
 
-    function _zapLP(uint256 cookAmount, uint256 maxETH, address , uint256 deadline, bool isWithEth) internal {
+    function _zapLP(uint256 cookAmount, uint256 maxETH, address poolAddress, uint256 deadline, bool isWithEth) internal {
         require(deadline >= block.timestamp, "CookDistribution: EXPIRED");
 
         address userAddress = msg.sender;
