@@ -17,7 +17,6 @@
 pragma experimental ABIEncoderV2;
 
 import "../oracle/IWETH.sol";
-import "hardhat/console.sol";
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

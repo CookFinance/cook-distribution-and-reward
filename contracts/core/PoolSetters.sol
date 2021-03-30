@@ -3,7 +3,6 @@ pragma solidity ^0.6.2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./PoolState.sol";
 import "./PoolGetters.sol";
-import "hardhat/console.sol";
 
 contract PoolSetters is PoolState, PoolGetters {
     using SafeMath for uint256;

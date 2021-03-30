@@ -2,13 +2,11 @@ pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "../external/UniswapV2Library.sol";
 import "./Constants.sol";
 import "./PoolSetters.sol";
 import "./IPool.sol";
-import "hardhat/console.sol";
 import "../oracle/IWETH.sol";
 
 contract CookPool is PoolSetters, IPool {

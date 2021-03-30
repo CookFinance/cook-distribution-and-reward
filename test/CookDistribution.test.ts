@@ -169,6 +169,7 @@ describe("CookDistribution", () => {
 
     it("has one percent vested", async () => {
       expect(await cookInstance.getUserVestedAmount(await addr1.getAddress(), TODAY_DAYS)).to.equal(12);
+      expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(), TODAY_DAYS)).to.equal(12);
     })
 
     it("has one percent vested after 20 days", async () => {

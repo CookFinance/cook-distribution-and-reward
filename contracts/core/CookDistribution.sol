@@ -2,7 +2,6 @@ pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
@@ -10,7 +9,6 @@ import "../oracle/IOracle.sol";
 import "../oracle/IWETH.sol";
 import "../oracle/IPriceConsumerV3.sol";
 import "./IPool.sol";
-import "hardhat/console.sol";
 import "../external/UniswapV2Library.sol";
 
 /**

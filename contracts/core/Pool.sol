@@ -1,14 +1,12 @@
 pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "../external/UniswapV2Library.sol";
 import "./Constants.sol";
 import "./PoolSetters.sol";
 import "./IPool.sol";
-import "hardhat/console.sol";
 import "../oracle/IWETH.sol";
 
 contract Pool is PoolSetters, IPool {
@@ -169,7 +167,6 @@ contract Pool is PoolSetters, IPool {
         addToVestingSchdule(msg.sender, cookAmount);
         decrementTotalRewarded(cookAmount, "insufficient rewarded balance");
         incrementBalanceOfPhantom(msg.sender, cookAmount);
-
         cookBalanceCheck();
 
         emit Harvest(msg.sender, cookAmount);
@@ -254,12 +251,7 @@ contract Pool is PoolSetters, IPool {
         // Swap ETH to WETH for user
         IWETH(wethAddress).deposit{value: msg.value}();
         cook().transfer(address(univ2()), cookAmount);
-
-        IERC20(wethAddress).safeTransferFrom(
-            address(this),
-            address(univ2()),
-            wethAmount
-        );
+        IERC20(wethAddress).safeTransferFrom(address(this), address(univ2()),wethAmount);
 
         return (wethAmount, lpPair.mint(address(this)));
     }
