@@ -1167,39 +1167,6 @@ describe("Pool", function () {
         }
       );
 
-      it("should be able to zap the vested amount with ETH", async function () {
-        expect(await this.pool.balanceOfClaimable(addrUserA)).to.be.equal(
-          initialHarvestAmount / 2
-        );
-        let overrides = {
-          value: ethers.utils.parseEther("0.00000000000000003"),
-          gasLimit: 600000,
-        };
-        await this.pool
-          .connect(userA)
-          .zapLPWithEth(initialHarvestAmount / 2, overrides);
-      });
-
-      it("should not be able to zap zero or negative amount with ETH", async function () {
-        await expect(this.pool.connect(userA).zapLPWithEth(-10000000)).to.be
-          .reverted;
-        await expect(
-          this.pool.connect(userA).zapLPWithEth(0)
-        ).to.be.revertedWith("zero zap amount");
-      });
-
-      it("should get reverted if tries to zap the cook amount with ETH more than the claimable", async function () {
-        let overrides = {
-          value: ethers.utils.parseEther("0.0000000000000003"),
-          gasLimit: 600000,
-        };
-        await expect(
-          this.pool
-            .connect(userA)
-            .zapLPWithEth(initialHarvestAmount / 2 + 5000000000000000)
-        ).to.be.revertedWith("insufficient claimable balance");
-      });
-
       it("the balance of claimable for userA should be updated correctly and userA can zap part of the claimable", async function () {
         let previousStakeAmount = await this.pool.balanceOfStaked(addrUserA);
         let claimable = initialHarvestAmount / 2;

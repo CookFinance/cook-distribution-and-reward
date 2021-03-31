@@ -290,10 +290,6 @@ contract Pool is PoolSetters, IPool {
         _zapLP(cookAmount, false);
     }
 
-    function zapLPWithEth(uint256 cookAmount) external payable {
-        _zapLP(cookAmount, true);
-    }
-
     function uniBalanceCheck() private view {
         require(
             univ2().balanceOf(address(this)) >= totalStaked(),

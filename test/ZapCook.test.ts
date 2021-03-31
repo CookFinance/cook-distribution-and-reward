@@ -183,7 +183,7 @@ describe("Zap Cook", () => {
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal('200000000000000000000');
 
       await cookInstance.connect(owner).pauseClaim();
-      await expect(cookInstance.connect(addr1).zapCook('100000000000000000000', this.cookPool.address)).to.be.revertedWith("Cook token cane not be zap due to emgergency");
+      await expect(cookInstance.connect(addr1).zapCook('100000000000000000000', this.cookPool.address)).to.be.reverted;
 
       await cookInstance.connect(owner).resumeCliam();
       await this.cookDistribution.connect(addr1).zapCook('100000000000000000000', this.cookPool.address);

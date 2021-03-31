@@ -75,7 +75,7 @@ contract CookDistribution is Ownable, AccessControl {
 
     // Fields for Admin
     // stop everyone from claiming/zapping cook token due to emgergency
-    bool private _pauseClaim;
+    bool public _pauseClaim;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN");
@@ -90,23 +90,6 @@ contract CookDistribution is Ownable, AccessControl {
         address oracle_,
         address priceConsumer_
     ) public {
-        require(token_ != IERC20(0), "Cook token can not be none");
-        require(oracle_ != address(0), "Oracle address can not be zero.");
-        require(
-            priceConsumer_ != address(0),
-            "PriceConsumer address can not be zero."
-        );
-
-        require(
-            beneficiaries_.length == amounts_.length,
-            "Length of input arrays do not match."
-        );
-        require(duration > 0, "duraction should be greater than zeo");
-        require(
-            start.add((duration).mul(SECONDS_PER_DAY)) > block.timestamp,
-            "start unix time should be greater than current block timestamp"
-        );
-
         // init beneficiaries
         for (uint256 i = 0; i < beneficiaries_.length; i++) {
             require(
@@ -280,12 +263,12 @@ contract CookDistribution is Ownable, AccessControl {
 
         require(
             _beneficiaryAllocations[userAddress].isRegistered == true,
-            "You have to be a registered address in order to release tokens."
+            "You have to be a registered address."
         );
 
         require(
             _beneficiaryAllocations[userAddress].blackListed == false,
-            "Your address is blacklisted"
+            "Your address is blacklisted."
         );
 
         require(
@@ -336,11 +319,6 @@ contract CookDistribution is Ownable, AccessControl {
         return (wethAmount, weth);
     }
 
-    // Zap into LP staking pool functions
-    function zapLPWithEth(uint256 cookAmount, address poolAddress) external payable {
-        _zapLP(cookAmount, poolAddress, true);
-    }
-
     function zapLP(uint256 cookAmount, address poolAddress) external {
         _zapLP(cookAmount, poolAddress, false);
     }
@@ -351,11 +329,7 @@ contract CookDistribution is Ownable, AccessControl {
 
         uint256 newUniv2 = 0;
 
-        if (isWithEth) {
-            (, newUniv2) = addLiquidityWithEth(cookAmount);
-        } else {
-            (, newUniv2) = addLiquidity(cookAmount);
-        }
+        (, newUniv2) = addLiquidity(cookAmount);
 
         IERC20(_oracle.pairAddress()).approve(poolAddress, newUniv2);
 
@@ -363,14 +337,14 @@ contract CookDistribution is Ownable, AccessControl {
     }
 
     function _checkValidZap(address userAddress, uint256 cookAmount) internal {
-        require(_beneficiaryAllocations[userAddress].isRegistered == true, "You have to be a registered address in order to release tokens.");
+        require(_beneficiaryAllocations[userAddress].isRegistered == true, "You have to be a registered address.");
 
         require(
             _beneficiaryAllocations[userAddress].blackListed == false,
             "Your address is blacklisted"
         );
 
-        require(_pauseClaim == false, "Cook token cane not be zap due to emgergency");
+        require(_pauseClaim == false, "Cook token can not be zap.");
 
         require(cookAmount > 0, "zero zap amount");
 
@@ -401,34 +375,6 @@ contract CookDistribution is Ownable, AccessControl {
             require(IERC20(lpPair.token0()).balanceOf(msg.sender) >= wethAmount, "insufficient weth balance");
             require(IERC20(lpPair.token0()).allowance(msg.sender, address(this)) >= wethAmount, "insufficient weth allowance");
             IERC20(lpPair.token0()).safeTransferFrom(msg.sender, _oracle.pairAddress(), wethAmount);
-        }
-
-        return (wethAmount, lpPair.mint(address(this)));
-    }
-
-    function addLiquidityWithEth(uint256 cookAmount) internal returns (uint256, uint256) {
-        (uint256 wethAmount, address wethAddress) =
-            _calWethAmountToPairCook(cookAmount);
-        // make sure the amount of eth == required weth amount
-        require(msg.value == wethAmount, "Please provide exact amount of eth needed to pair cook tokens");
-
-        // Swap ETH to WETH for user
-        IWETH(wethAddress).deposit{value: msg.value}();
-        _token.safeTransfer(_oracle.pairAddress(), cookAmount);
-
-        IUniswapV2Pair lpPair = IUniswapV2Pair(_oracle.pairAddress());
-        if (lpPair.token0() == address(_token)) {
-            // token0 == cook, token1 == weth
-            require(IERC20(lpPair.token1()).balanceOf(address(this)) >= wethAmount, "insufficient weth balance");
-            IERC20(lpPair.token1()).safeTransferFrom(
-                address(this),
-                _oracle.pairAddress(),
-                wethAmount
-            );
-        } else if (lpPair.token1() == address(_token)) {
-            // token0 == weth, token1 == cook
-            require(IERC20(lpPair.token0()).balanceOf(address(this)) >= wethAmount, "insufficient weth balance");
-            IERC20(lpPair.token0()).safeTransferFrom(address(this), _oracle.pairAddress(), wethAmount);
         }
 
         return (wethAmount, lpPair.mint(address(this)));
@@ -466,7 +412,7 @@ contract CookDistribution is Ownable, AccessControl {
 
         require(
             _beneficiaryAllocations[beneficiaryAddress].isRegistered == false,
-            "The address to be added already exisits in the distribution contact, please use a new one"
+            "The address to be added already exisits."
         );
 
         _beneficiaryAllocations[beneficiaryAddress].isRegistered = true;
@@ -483,12 +429,12 @@ contract CookDistribution is Ownable, AccessControl {
         require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
 
         require(beneficiaryAddresses.length > 0 && amounts.length > 0 && beneficiaryAddresses.length == amounts.length,
-            "The length of user addressed and amounts should be matched and cannot be empty"
+            "Inconsistent length input"
         );
 
         for (uint256 i = 0; i < beneficiaryAddresses.length; i++) {
             require(_beneficiaryAllocations[beneficiaryAddresses[i]].isRegistered == false,
-                "The address to be added already exisits in the distribution contact, please use a new one"
+                "The address to be added already exisits."
             );
             _beneficiaryAllocations[beneficiaryAddresses[i]].isRegistered = true;
             _beneficiaryAllocations[beneficiaryAddresses[i]] = Allocation(amounts[i], 0, false, true);
@@ -502,7 +448,7 @@ contract CookDistribution is Ownable, AccessControl {
 
         require(
             priceKey_.length == percentageValue_.length && priceKey_.length > 0,
-            "incorrect values are provided for priceKey and percentagekey"
+            "length inconsistency."
         );
 
         _priceKey = priceKey_;
