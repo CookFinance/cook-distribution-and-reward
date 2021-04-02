@@ -231,7 +231,7 @@ contract CookPool is PoolSetters, IPool {
     function cookBalanceCheck() private view {
         require(
             cook().balanceOf(address(this)) >=
-                totalVesting() + totalRewarded() - totalClaimed(),
+                totalVesting().add(totalRewarded()).sub(totalClaimed()),
             "Inconsistent COOK balances"
         );
     }
