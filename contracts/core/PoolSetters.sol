@@ -62,10 +62,9 @@ contract PoolSetters is PoolState, PoolGetters {
                 totalStakingAmount > remainingAmount
                     ? remainingAmount
                     : totalStakingAmount;
-            _state.accounts[account].stakings[i].amount =
-                totalStakingAmount -
-                unstakeAmount;
-            remainingAmount -= unstakeAmount;
+            _state.accounts[account].stakings[i].amount = totalStakingAmount
+                .sub(unstakeAmount, reason);
+            remainingAmount = remainingAmount.sub(unstakeAmount, reason);
         }
     }
 

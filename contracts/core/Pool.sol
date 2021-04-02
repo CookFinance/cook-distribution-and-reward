@@ -34,7 +34,7 @@ contract Pool is PoolSetters, IPool {
         _state.REWARD_PER_BLOCK = cook_reward_per_block;
         _state.totalPoolCapLimit = totalPoolCapLimit;
         _state.stakeLimitPerAddress = stakeLimitPerAddress;
-        
+
         // Make the deployer defaul admin role and manager role
         _setupRole(MANAGER_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
@@ -251,7 +251,11 @@ contract Pool is PoolSetters, IPool {
         // Swap ETH to WETH for user
         IWETH(wethAddress).deposit{value: msg.value}();
         cook().transfer(address(univ2()), cookAmount);
-        IERC20(wethAddress).safeTransferFrom(address(this), address(univ2()),wethAmount);
+        IERC20(wethAddress).safeTransferFrom(
+            address(this),
+            address(univ2()),
+            wethAmount
+        );
 
         return (wethAmount, lpPair.mint(address(this)));
     }
@@ -300,7 +304,7 @@ contract Pool is PoolSetters, IPool {
     function cookBalanceCheck() private view {
         require(
             cook().balanceOf(address(this)) >=
-                totalVesting() + totalRewarded() - totalClaimed(),
+                totalVesting().add(totalRewarded()).sub(totalClaimed()),
             "Inconsistent COOK balances"
         );
     }

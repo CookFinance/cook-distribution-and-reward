@@ -168,8 +168,8 @@ contract PoolGetters is PoolState {
                 _state.accounts[account].vestings[i].amount;
             uint256 start = _state.accounts[account].vestings[i].start;
 
-            uint32 startDay = uint32(start / SECONDS_PER_DAY);
-            uint32 today = uint32(blockTimestamp() / SECONDS_PER_DAY);
+            uint32 startDay = uint32(start.div(SECONDS_PER_DAY));
+            uint32 today = uint32(blockTimestamp().div(SECONDS_PER_DAY));
             uint32 vestingInterval = Constants.getVestingInterval();
             uint256 vestingDuration = getVestingDuration();
 
@@ -191,7 +191,7 @@ contract PoolGetters is PoolState {
                 claimable += vested;
             }
         }
-        return claimable - balanceOfClaimed(account);
+        return claimable.sub(balanceOfClaimed(account));
     }
 
     function isMiningPaused() internal view returns (bool) {
@@ -199,7 +199,9 @@ contract PoolGetters is PoolState {
     }
 
     function isFull() public view returns (bool) {
-        return _state.totalPoolCapLimit != 0 && _state.balance.staked >= _state.totalPoolCapLimit;
+        return
+            _state.totalPoolCapLimit != 0 &&
+            _state.balance.staked >= _state.totalPoolCapLimit;
     }
 
     function isAddrBlacklisted(address addr) internal view returns (bool) {
