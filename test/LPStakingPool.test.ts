@@ -242,9 +242,7 @@ describe("Pool", function () {
         expect(
           await poolInstance.connect(userA).getRewardPerBlock()
         ).to.be.equal(0);
-        await expect(this.pool.connect(userA).stake(10)).to.be.revertedWith(
-          "liquidity mining program is paused due to some emergency, please stay tuned"
-        );
+        await expect(this.pool.connect(userA).stake(10)).to.be.revertedWith("liquidity mining program is paused");
 
         await expect(
           poolInstance.connect(userA).resumeMiningReward(REWARD_PER_BLOCK)
@@ -264,13 +262,13 @@ describe("Pool", function () {
           .blacklistAddress(await userB.getAddress());
 
         await expect(this.pool.connect(userB).stake(10)).to.be.revertedWith(
-          "Your address is blacklisted, you can not claim/harvet/zap cook reward, but you can withdraw you LP tokens"
+          "Your address is blacklisted"
         );
         await expect(this.pool.connect(userB).claim(10)).to.be.revertedWith(
-          "Your address is blacklisted, you can not claim/harvet/zap cook reward, but you can withdraw you LP tokens"
+          "Your address is blacklisted"
         );
         await expect(this.pool.connect(userB).harvest(10)).to.be.revertedWith(
-          "Your address is blacklisted, you can not claim/harvet/zap cook reward, but you can withdraw you LP tokens"
+          "Your address is blacklisted"
         );
 
         await expect(
@@ -394,13 +392,13 @@ describe("Pool", function () {
       it("Cap limit", async function () {
         await poolInstance.connect(owner).setTotalPoolCapLimit(10);
         await expect(poolInstance.connect(userA).stake(20)).to.be.revertedWith(
-          "The amount to be staked will exceed pool limit"
+          "Exceed pool limit"
         );
 
         await poolInstance.connect(owner).setTotalPoolCapLimit(100);
         await poolInstance.connect(owner).setStakeLimitPerAddress(10);
         await expect(poolInstance.connect(userA).stake(20)).to.be.revertedWith(
-          "The amount to be staked will exceed per address stake limit"
+          "Exceed per address stake limit"
         );
 
         await poolInstance.connect(owner).setStakeLimitPerAddress(100);
@@ -1113,7 +1111,7 @@ describe("Pool", function () {
         await poolInstance.connect(owner).setTotalPoolCapLimit(1);
         await expect(
           poolInstance.connect(userA).zapLP(initialHarvestAmount / 2)
-        ).to.be.revertedWith("The amount to be staked will exceed pool limit");
+        ).to.be.revertedWith("Exceed pool limit");
 
         await poolInstance
           .connect(owner)
@@ -1122,7 +1120,7 @@ describe("Pool", function () {
         await expect(
           poolInstance.connect(userA).zapLP(initialHarvestAmount / 2)
         ).to.be.revertedWith(
-          "The amount to be staked will exceed per address stake limit"
+          "Exceed per address stake limit"
         );
 
         await poolInstance

@@ -129,7 +129,7 @@ describe("CookPool", function () {
 
         await expect(cookPoolInstance.connect(owner).pauseMinigReward())
         expect(await cookPoolInstance.connect(userA).getRewardPerBlock()).to.be.equal(0)
-        await expect(this.cookPool.connect(userA).stake(10)).to.be.revertedWith("liquidity mining program is paused due to some emergency, please stay tuned");
+        await expect(this.cookPool.connect(userA).stake(10)).to.be.revertedWith("liquidity mining program is paused");
 
         await expect(cookPoolInstance.connect(userA).resumeMiningReward(REWARD_PER_BLOCK)).to.be.reverted;
         await expect(cookPoolInstance.connect(owner).resumeMiningReward(REWARD_PER_BLOCK))
@@ -138,9 +138,9 @@ describe("CookPool", function () {
         await expect(cookPoolInstance.connect(userA).blacklistAddress(await userB.getAddress())).to.be.reverted;
         await cookPoolInstance.connect(owner).blacklistAddress(await userB.getAddress());
 
-        await expect(this.cookPool.connect(userB).stake(10)).to.be.revertedWith("Your address is blacklisted, you can not claim/harvet/zap cook reward, but you can withdraw you LP tokens");
-        await expect(this.cookPool.connect(userB).claim(10)).to.be.revertedWith("Your address is blacklisted, you can not claim/harvet/zap cook reward, but you can withdraw you LP tokens");
-        await expect(this.cookPool.connect(userB).harvest(10)).to.be.revertedWith("Your address is blacklisted, you can not claim/harvet/zap cook reward, but you can withdraw you LP tokens");
+        await expect(this.cookPool.connect(userB).stake(10)).to.be.revertedWith("Your address is blacklisted");
+        await expect(this.cookPool.connect(userB).claim(10)).to.be.revertedWith("Your address is blacklisted");
+        await expect(this.cookPool.connect(userB).harvest(10)).to.be.revertedWith("Your address is blacklisted");
 
         await expect(cookPoolInstance.connect(userA).removeAddressFromBlacklist(await userB.getAddress())).to.be.reverted;
         expect(await cookPoolInstance.connect(owner).removeAddressFromBlacklist(await userB.getAddress()));
@@ -204,11 +204,11 @@ describe("CookPool", function () {
 
       it('Cap limit', async function () {
         await cookPoolInstance.connect(owner).setTotalPoolCapLimit(10);
-        await expect(cookPoolInstance.connect(userA).stake(20)).to.be.revertedWith('The amount to be staked will exceed pool limit');
+        await expect(cookPoolInstance.connect(userA).stake(20)).to.be.revertedWith('Exceed pool limit');
 
         await cookPoolInstance.connect(owner).setTotalPoolCapLimit(100);
         await cookPoolInstance.connect(owner).setStakeLimitPerAddress(10);
-        await expect(cookPoolInstance.connect(userA).stake(20)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
+        await expect(cookPoolInstance.connect(userA).stake(20)).to.be.revertedWith('Exceed per address stake limit');
 
         await cookPoolInstance.connect(owner).setStakeLimitPerAddress(100);
         await expect(this.cookPool.connect(userA).stake(10))
@@ -709,10 +709,9 @@ describe("CookPool", function () {
       });
 
       it('Cap limit', async function () {
-        console.log('start')
         await cookPoolInstance.connect(owner).setTotalPoolCapLimit(1);
-        await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount / 2)).to.be.revertedWith('The amount to be staked will exceed pool limit');
-        await expect(cookPoolInstance.connect(userA).stake(initialHarvestAmount / 2)).to.be.revertedWith('The amount to be staked will exceed pool limit');        
+        await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount / 2)).to.be.revertedWith('Exceed pool limit');
+        await expect(cookPoolInstance.connect(userA).stake(initialHarvestAmount / 2)).to.be.revertedWith('Exceed pool limit');        
 
         await cookPoolInstance.connect(owner).setTotalPoolCapLimit(15 + initialHarvestAmount / 2);
         expect(await cookPoolInstance.connect(userA).isFull()).to.be.equal(false);
@@ -721,8 +720,8 @@ describe("CookPool", function () {
         expect(await cookPoolInstance.connect(userA).isFull()).to.be.equal(false);
 
         await cookPoolInstance.connect(owner).setStakeLimitPerAddress(1);
-        await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount / 4)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
-        await expect(cookPoolInstance.connect(userA).stake(initialHarvestAmount / 4)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
+        await expect(cookPoolInstance.connect(userA).zapCook(initialHarvestAmount / 4)).to.be.revertedWith('Exceed per address stake limit');
+        await expect(cookPoolInstance.connect(userA).stake(initialHarvestAmount / 4)).to.be.revertedWith('Exceed per address stake limit');
 
         await cookPoolInstance.connect(owner).setStakeLimitPerAddress(15 + initialHarvestAmount / 2);
         await this.cookPool.connect(userA).zapCook(initialHarvestAmount / 2);
