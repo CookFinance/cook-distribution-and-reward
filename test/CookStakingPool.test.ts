@@ -457,8 +457,8 @@ describe("CookPool", function () {
         it('harvest should be reverted when no reward for given user', async function () {
           const newBlockNumber = 10;
           // user B stakes 20 at block number 10
-          await this.cook.connect(owner).transfer(addrUserB, 20);
-          await this.cook.connect(userB).approve(this.cookPool.address, 20);
+          await this.cook.connect(owner).transfer(addrUserB, 40);
+          await this.cook.connect(userB).approve(this.cookPool.address, 40);
           await this.cookPool.setBlockNumber(newBlockNumber);
           await this.cookPool.connect(userB).stake(20);
 
@@ -467,7 +467,22 @@ describe("CookPool", function () {
           expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(expectedReward);
           expect(await this.cookPool.balanceOfRewarded(addrUserB)).to.be.equal(0);
 
-          await expect(this.cookPool.connect(userB).harvest(5)).to.be.revertedWith("insufficient rewarded balance");
+          // now change REWARD_PER_BLOCK to 3000
+          const nextBlockNumber = 20;
+          await this.cookPool.connect(owner).setRewardPerBlock(3000);
+          expect(await this.cookPool.connect(owner).getRewardPerBlock()).to.be.equal(3000);
+          await this.cookPool.setBlockNumber(nextBlockNumber);
+          await this.cookPool.connect(userB).stake(20);
+          
+          let nextExpectedReward = expectedReward + (nextBlockNumber - newBlockNumber) * 3000;
+          expect(await this.cookPool.totalRewarded()).to.be.equal(nextExpectedReward);
+          // user A should get 1/3 of reward since newBlockNumber
+          let userANextExpectedReward = expectedReward + (nextBlockNumber - newBlockNumber) * 1000;
+          expect(await this.cookPool.balanceOfRewarded(addrUserA)).to.be.equal(userANextExpectedReward);
+
+          // user B should get 1/3 of reward since newBlockNumber
+          let userBNextExpectedReward = 0 + (nextBlockNumber - newBlockNumber) * 2000;
+          expect(await this.cookPool.balanceOfRewarded(addrUserB)).to.be.equal(userBNextExpectedReward);
         });
       });
 
