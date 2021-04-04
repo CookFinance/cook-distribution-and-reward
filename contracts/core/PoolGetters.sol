@@ -118,7 +118,7 @@ contract PoolGetters is PoolState {
                 (today >= (startDay + getStakeLockupDuration())) ||
                 isAddrBlacklisted(account)
             ) {
-                unstakable += totalStakingAmount; // If after end of staking lockup, then the unstakable amount is total amount.
+                unstakable = unstakable.add(totalStakingAmount); // If after end of staking lockup, then the unstakable amount is total amount.
             } else {
                 unstakable += 0; // If it's before the staking lockup then the unstakable amount is zero.
             }
@@ -155,7 +155,7 @@ contract PoolGetters is PoolState {
     function balanceOfVesting(address account) public view returns (uint256) {
         uint256 totalVestingAmount;
         for (uint256 i = 0; i < _state.accounts[account].vestings.length; i++) {
-            totalVestingAmount += _state.accounts[account].vestings[i].amount;
+            totalVestingAmount = totalVestingAmount.add(_state.accounts[account].vestings[i].amount);
         }
         return totalVestingAmount;
     }
@@ -174,7 +174,7 @@ contract PoolGetters is PoolState {
             uint256 vestingDuration = getVestingDuration();
 
             if (today >= (startDay + vestingDuration)) {
-                claimable += totalVestingAmount; // If after end of vesting, then the vested amount is total amount.
+                claimable = claimable.add(totalVestingAmount); // If after end of vesting, then the vested amount is total amount.
             } else if (today <= startDay) {
                 claimable += 0; // If it's before the vesting then the vested amount is zero.
             } else {
@@ -188,7 +188,7 @@ contract PoolGetters is PoolState {
                     totalVestingAmount.mul(effectiveDaysVested).div(
                         vestingDuration
                     );
-                claimable += vested;
+                claimable = claimable.add(vested);
             }
         }
         return claimable.sub(balanceOfClaimed(account));
@@ -219,23 +219,23 @@ contract PoolGetters is PoolState {
     function checkMiningPaused() public {
         require(
             isMiningPaused() == false,
-            "liquidity mining program is paused due to some emergency, please stay tuned"
+            "liquidity mining program is paused"
         );
     }
 
     function ensureAddrNotBlacklisted(address addr) public {
         require(
             isAddrBlacklisted(addr) == false,
-            "Your address is blacklisted, you can not claim/harvet/zap cook reward, but you can withdraw you LP tokens"
+            "Your address is blacklisted"
         );
     }
 
     function checkPoolStakeCapLimit(uint256 amountToStake) public {
         require(
             (_state.totalPoolCapLimit == 0 || // no limit
-                (_state.balance.staked + amountToStake) <=
+                (_state.balance.staked.add(amountToStake)) <=
                 _state.totalPoolCapLimit) == true,
-            "The amount to be staked will exceed pool limit"
+            "Exceed pool limit"
         );
     }
 
@@ -244,9 +244,9 @@ contract PoolGetters is PoolState {
     {
         require(
             (_state.stakeLimitPerAddress == 0 || // no limit
-                (balanceOfStaked(account) + amountToStake) <=
+                (balanceOfStaked(account).add(amountToStake)) <=
                 _state.stakeLimitPerAddress) == true,
-            "The amount to be staked will exceed per address stake limit"
+            "Exceed per address stake limit"
         );
     }
 }

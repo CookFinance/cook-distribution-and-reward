@@ -200,11 +200,11 @@ describe("Zap Cook", () => {
       expect(await this.cookDistribution.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal('200000000000000000000');
 
       await this.cookPool.connect(owner).setTotalPoolCapLimit(1);
-      await expect(cookInstance.connect(addr1).zapCook('100000000000000000000', this.cookPool.address)).to.be.revertedWith('The amount to be staked will exceed pool limit');
+      await expect(cookInstance.connect(addr1).zapCook('100000000000000000000', this.cookPool.address)).to.be.revertedWith('Exceed pool limit');
 
       await this.cookPool.connect(owner).setTotalPoolCapLimit('300000000000000000000');
       await this.cookPool.connect(owner).setStakeLimitPerAddress(1);
-      await expect(cookInstance.connect(addr1).zapCook('100000000000000000000', this.cookPool.address)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
+      await expect(cookInstance.connect(addr1).zapCook('100000000000000000000', this.cookPool.address)).to.be.revertedWith('Exceed per address stake limit');
 
       await cookPoolInstance.connect(owner).setStakeLimitPerAddress('300000000000000000000');
 

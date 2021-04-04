@@ -244,11 +244,11 @@ describe("Zap Uni", () => {
       expect(await this.weth.balanceOf(await addr1.getAddress())).to.be.equal('20000000000000000');
 
       await this.pool.connect(owner).setTotalPoolCapLimit(1);
-      await expect(cookInstance.connect(addr1).zapLP('100000000000000000000', this.pool.address)).to.be.revertedWith('The amount to be staked will exceed pool limit');
+      await expect(cookInstance.connect(addr1).zapLP('100000000000000000000', this.pool.address)).to.be.revertedWith('Exceed pool limit');
 
       await this.pool.connect(owner).setTotalPoolCapLimit('300000000000000000000');
       await this.pool.connect(owner).setStakeLimitPerAddress(1);
-      await expect(cookInstance.connect(addr1).zapLP('100000000000000000000', this.pool.address)).to.be.revertedWith('The amount to be staked will exceed per address stake limit');
+      await expect(cookInstance.connect(addr1).zapLP('100000000000000000000', this.pool.address)).to.be.revertedWith('Exceed per address stake limit');
 
       await poolInstance.connect(owner).setStakeLimitPerAddress('300000000000000000000');
       await this.weth.connect(addr1).approve(this.cookDistribution.address, '20000000000000000');
