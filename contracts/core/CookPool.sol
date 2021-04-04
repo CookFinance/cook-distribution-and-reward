@@ -240,4 +240,11 @@ contract CookPool is PoolSetters, IPool {
     function emergencyWithdraw(uint256 amount) public onlyOwner {
         cook().safeTransfer(msg.sender, amount);
     }
+
+    // set cook token reward per block
+    function setRewardPerBlock(uint256 rewardPerBlock) public {
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+        calculateNewRewardSinceLastRewardBlock();
+        _state.REWARD_PER_BLOCK = rewardPerBlock;
+    }
 }

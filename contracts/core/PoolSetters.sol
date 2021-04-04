@@ -131,12 +131,6 @@ contract PoolSetters is PoolState, PoolGetters {
         _state.REWARD_PER_BLOCK = rewardPerBlock;
     }
 
-    // set cook token reward per block
-    function setRewardPerBlock(uint256 rewardPerBlock) public {
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
-        _state.REWARD_PER_BLOCK = rewardPerBlock;
-    }
-
     function setTotalPoolCapLimit(uint256 totalPoolCapLimit) public {
         require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
         _state.totalPoolCapLimit = totalPoolCapLimit;

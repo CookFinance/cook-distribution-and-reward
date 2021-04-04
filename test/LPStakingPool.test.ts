@@ -770,8 +770,8 @@ describe("Pool", function () {
         it("harvest should be reverted when no reward for given user", async function () {
           const newBlockNumber = 10;
           // user B stakes 20 at block number 10
-          await this.univ2.connect(owner).transfer(addrUserB, 20);
-          await this.univ2.connect(userB).approve(this.pool.address, 20);
+          await this.univ2.connect(owner).transfer(addrUserB, 40);
+          await this.univ2.connect(userB).approve(this.pool.address, 40);
           await this.pool.setBlockNumber(newBlockNumber);
           await this.pool.connect(userB).stake(20);
 
@@ -786,6 +786,23 @@ describe("Pool", function () {
           await expect(this.pool.connect(userB).harvest(5)).to.be.revertedWith(
             "insufficient rewarded balance"
           );
+
+          // now change REWARD_PER_BLOCK to 3000
+          const nextBlockNumber = 20;
+          await this.pool.connect(owner).setRewardPerBlock(3000);
+          expect(await this.pool.connect(owner).getRewardPerBlock()).to.be.equal(3000);
+          await this.pool.setBlockNumber(nextBlockNumber);
+          await this.pool.connect(userB).stake(20);
+
+          let nextExpectedReward = expectedReward + (nextBlockNumber - newBlockNumber) * 3000;
+          expect(await this.pool.totalRewarded()).to.be.equal(nextExpectedReward);
+          // user A should get 1/3 of reward since newBlockNumber
+          let userANextExpectedReward = expectedReward + (nextBlockNumber - newBlockNumber) * 1000;
+          expect(await this.pool.balanceOfRewarded(addrUserA)).to.be.equal(userANextExpectedReward);
+
+          // user B should get 1/3 of reward since newBlockNumber
+          let userBNextExpectedReward = 0 + (nextBlockNumber - newBlockNumber) * 2000;
+          expect(await this.pool.balanceOfRewarded(addrUserB)).to.be.equal(userBNextExpectedReward);
         });
       });
 
