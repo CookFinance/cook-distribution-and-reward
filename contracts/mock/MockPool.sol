@@ -42,7 +42,7 @@ contract MockPool is Pool, MockState {
         _blockNumber = blockNumber;
     }
 
-    function blockNumber() internal view override returns (uint256) {
+    function blockNumber() public view override returns (uint256) {
         return _blockNumber;
     }
 
@@ -54,7 +54,7 @@ contract MockPool is Pool, MockState {
         _blockTimestamp = blockTimestamp;
     }
 
-    function blockTimestamp() internal view override returns (uint256) {
+    function blockTimestamp() public view override returns (uint256) {
         return _blockTimestamp;
     }
 

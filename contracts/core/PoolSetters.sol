@@ -35,7 +35,7 @@ contract PoolSetters is PoolState, PoolGetters {
         );
         _state.balance.staked = _state.balance.staked.add(amount);
 
-        Vesting memory staking = Vesting(blockTimestamp(), amount);
+        Vesting memory staking = Vesting(blockTimestamp(), amount, blockNumber());
         _state.accounts[account].stakings.push(staking);
     }
 
@@ -99,7 +99,7 @@ contract PoolSetters is PoolState, PoolGetters {
     }
 
     function addToVestingSchdule(address account, uint256 amount) internal {
-        Vesting memory vesting = Vesting(blockTimestamp(), amount);
+        Vesting memory vesting = Vesting(blockTimestamp(), amount, blockNumber());
         _state.accounts[account].vestings.push(vesting);
         _state.balance.vesting = _state.balance.vesting.add(amount);
     }

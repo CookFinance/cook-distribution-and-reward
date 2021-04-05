@@ -23,6 +23,7 @@ contract Account {
 struct Vesting {
     uint256 start;
     uint256 amount; //cook
+    uint256 startBlockNumber;
 }
 
 contract Storage {

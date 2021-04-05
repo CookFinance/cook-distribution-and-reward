@@ -57,11 +57,11 @@ contract PoolGetters is PoolState {
         return Constants.getVestingDuration();
     }
 
-    function blockNumber() internal view virtual returns (uint256) {
+    function blockNumber() public view virtual returns (uint256) {
         return block.number;
     }
 
-    function blockTimestamp() internal view virtual returns (uint256) {
+    function blockTimestamp() public view virtual returns (uint256) {
         return block.timestamp;
     }
 
@@ -194,7 +194,7 @@ contract PoolGetters is PoolState {
         return claimable.sub(balanceOfClaimed(account));
     }
 
-    function isMiningPaused() internal view returns (bool) {
+    function isMiningPaused() public view returns (bool) {
         return _state.pauseMinig;
     }
 
@@ -204,7 +204,7 @@ contract PoolGetters is PoolState {
             _state.balance.staked >= _state.totalPoolCapLimit;
     }
 
-    function isAddrBlacklisted(address addr) internal view returns (bool) {
+    function isAddrBlacklisted(address addr) public view returns (bool) {
         return _state.accounts[addr].isBlacklisted;
     }
 

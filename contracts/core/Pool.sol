@@ -235,31 +235,6 @@ contract Pool is PoolSetters, IPool {
         return (wethAmount, lpPair.mint(address(this)));
     }
 
-    function addLiquidityWithEth(uint256 cookAmount)
-        internal
-        returns (uint256, uint256)
-    {
-        (uint256 wethAmount, address wethAddress) =
-            _calWethAmountToPairCook(cookAmount);
-
-        require(
-            msg.value == wethAmount,
-            "Please provide exact amount of eth needed to pair cook tokens"
-        );
-        IUniswapV2Pair lpPair = IUniswapV2Pair(address(univ2()));
-
-        // Swap ETH to WETH for user
-        IWETH(wethAddress).deposit{value: msg.value}();
-        cook().transfer(address(univ2()), cookAmount);
-        IERC20(wethAddress).safeTransferFrom(
-            address(this),
-            address(univ2()),
-            wethAmount
-        );
-
-        return (wethAmount, lpPair.mint(address(this)));
-    }
-
     function _zapLP(uint256 cookAmount, bool isWithEth) internal {
         require(cookAmount > 0, "zero zap amount");
 
@@ -268,17 +243,18 @@ contract Pool is PoolSetters, IPool {
             "insufficient claimable balance"
         );
 
+        require(
+            isWithEth == false,
+            "Only supports WETH"
+        );
+
         checkMiningPaused();
         ensureAddrNotBlacklisted(msg.sender);
 
         uint256 lessWeth = 0;
         uint256 newUniv2 = 0;
 
-        if (isWithEth) {
-            (lessWeth, newUniv2) = addLiquidityWithEth(cookAmount);
-        } else {
-            (lessWeth, newUniv2) = addLiquidity(cookAmount);
-        }
+        (lessWeth, newUniv2) = addLiquidity(cookAmount);
 
         checkPoolStakeCapLimit(newUniv2);
         checkPerAddrStakeLimit(newUniv2, msg.sender);
