@@ -46,6 +46,7 @@ contract Pool is PoolSetters, IPool {
     event Claim(address indexed account, uint256 cookAmount);
     event Harvest(address indexed account, uint256 cookAmount);
     event ZapLP(address indexed account, uint256 newUniv2);
+    event UpdateTotalReward(uint256 newTotalAmount);
 
     fallback() external payable {
         revert();
@@ -101,7 +102,7 @@ contract Pool is PoolSetters, IPool {
         emit ZapLP(userAddress, univ2Amount);
     }
 
-    function calculateNewRewardSinceLastRewardBlock() internal virtual {
+    function calculateNewRewardSinceLastRewardBlock() public virtual {
         uint256 lastRewardBlock = lastRewardBlock();
         uint256 blockNumber = blockNumber();
         if (blockNumber > lastRewardBlock) {
@@ -114,6 +115,8 @@ contract Pool is PoolSetters, IPool {
             updateLastRewardBlock(blockNumber);
         }
         cookBalanceCheck();
+
+        emit UpdateTotalReward(totalRewarded());
     }
 
     function unstake(uint256 univ2Amount) external override {
@@ -243,10 +246,7 @@ contract Pool is PoolSetters, IPool {
             "insufficient claimable balance"
         );
 
-        require(
-            isWithEth == false,
-            "Only supports WETH"
-        );
+        require(isWithEth == false, "Only supports WETH");
 
         checkMiningPaused();
         ensureAddrNotBlacklisted(msg.sender);

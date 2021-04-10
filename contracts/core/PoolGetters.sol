@@ -57,6 +57,10 @@ contract PoolGetters is PoolState {
         return Constants.getVestingDuration();
     }
 
+    function getVestingInterval() public view virtual returns (uint256) {
+        return Constants.getVestingInterval();
+    }
+
     function blockNumber() public view virtual returns (uint256) {
         return block.number;
     }
@@ -155,7 +159,9 @@ contract PoolGetters is PoolState {
     function balanceOfVesting(address account) public view returns (uint256) {
         uint256 totalVestingAmount;
         for (uint256 i = 0; i < _state.accounts[account].vestings.length; i++) {
-            totalVestingAmount = totalVestingAmount.add(_state.accounts[account].vestings[i].amount);
+            totalVestingAmount = totalVestingAmount.add(
+                _state.accounts[account].vestings[i].amount
+            );
         }
         return totalVestingAmount;
     }

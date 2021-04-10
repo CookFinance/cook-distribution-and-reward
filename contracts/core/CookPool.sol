@@ -43,6 +43,7 @@ contract CookPool is PoolSetters, IPool {
     event Claim(address indexed account, uint256 cookAmount);
     event Harvest(address indexed account, uint256 cookAmount);
     event ZapCook(address indexed account, uint256 cookAmount);
+    event UpdateTotalReward(uint256 newTotalAmount);
 
     function stake(uint256 cookAmount) external override {
         checkMiningPaused();
@@ -94,7 +95,7 @@ contract CookPool is PoolSetters, IPool {
         emit ZapCook(userAddress, cookAmount);
     }
 
-    function calculateNewRewardSinceLastRewardBlock() internal virtual {
+    function calculateNewRewardSinceLastRewardBlock() public virtual {
         uint256 lastRewardBlock = lastRewardBlock();
         uint256 blockNumber = blockNumber();
         if (blockNumber > lastRewardBlock) {
@@ -107,6 +108,8 @@ contract CookPool is PoolSetters, IPool {
             updateLastRewardBlock(blockNumber);
         }
         cookBalanceCheck();
+
+        emit UpdateTotalReward(totalRewarded());
     }
 
     function unstake(uint256 cookAmount) external override {
