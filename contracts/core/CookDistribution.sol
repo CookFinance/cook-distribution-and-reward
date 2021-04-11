@@ -22,8 +22,6 @@ contract CookDistribution is Ownable, AccessControl {
 
     event AllocationRegistered(address indexed beneficiary, uint256 amount);
     event TokensWithdrawal(address userAddress, uint256 amount);
-    event ChangeUserAvailable(address userAddress, uint256 amount);
-    event ChangeUserReleased(address userAddress, uint256 amount);
 
     struct Allocation {
         uint256 amount;
@@ -464,17 +462,5 @@ contract CookDistribution is Ownable, AccessControl {
 
     function getManagerRole() public returns (bytes32) {
         return MANAGER_ROLE;
-    }
-
-    function setUserAvailable(address userAddr, uint256 amount) public {
-        require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
-        _beneficiaryAllocations[userAddr].amount = amount;
-        emit ChangeUserAvailable(userAddr, amount);
-    }
-
-    function setUserReleased(address userAddr, uint256 amount) public {
-        require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
-        _beneficiaryAllocations[userAddr].released = amount;
-        emit ChangeUserReleased(userAddr, amount);
     }
 }
