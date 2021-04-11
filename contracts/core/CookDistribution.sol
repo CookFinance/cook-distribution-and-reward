@@ -332,11 +332,11 @@ contract CookDistribution is Ownable, AccessControl {
     /**
      * add adddress with allocation
      */
-    function addAddressWithAllocation(address beneficiaryAddress, uint256 amount ) public  {
+    function addAddressWithAllocation(address beneficiaryAddress, uint256 amount, uint256 release) public  {
         require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
         require(_beneficiaryAllocations[beneficiaryAddress].isRegistered == false, "The address exisits.");
         _beneficiaryAllocations[beneficiaryAddress].isRegistered = true;
-        _beneficiaryAllocations[beneficiaryAddress] = Allocation( amount, 0, false, true
+        _beneficiaryAllocations[beneficiaryAddress] = Allocation( amount, release, false, true
         );
 
         emit AllocationRegistered(beneficiaryAddress, amount);
@@ -345,7 +345,7 @@ contract CookDistribution is Ownable, AccessControl {
     /**
      * Add multiple address with multiple allocations
      */
-    function addMultipleAddressWithAllocations(address[] memory beneficiaryAddresses, uint256[] memory amounts) public {
+    function addMultipleAddressWithAllocations(address[] memory beneficiaryAddresses, uint256[] memory amounts, uint256[] memory releases) public {
         require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
 
         require(beneficiaryAddresses.length > 0 && amounts.length > 0 && beneficiaryAddresses.length == amounts.length, "Inconsistent length input");
@@ -353,7 +353,7 @@ contract CookDistribution is Ownable, AccessControl {
         for (uint256 i = 0; i < beneficiaryAddresses.length; i++) {
             require(_beneficiaryAllocations[beneficiaryAddresses[i]].isRegistered == false, "The address exisits.");
             _beneficiaryAllocations[beneficiaryAddresses[i]].isRegistered = true;
-            _beneficiaryAllocations[beneficiaryAddresses[i]] = Allocation(amounts[i], 0, false, true);
+            _beneficiaryAllocations[beneficiaryAddresses[i]] = Allocation(amounts[i], releases[i], false, true);
 
             emit AllocationRegistered(beneficiaryAddresses[i], amounts[i]);
         }
