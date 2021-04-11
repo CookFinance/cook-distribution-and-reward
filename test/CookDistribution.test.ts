@@ -129,8 +129,8 @@ describe("CookDistribution", () => {
 
     it("grant manager role to an address", async () => {
       await expect(cookInstance.connect(addr1).setPriceBasedMaxStep(1000)).to.be.reverted;
-      await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr2.getAddress(), 2000)).to.be.reverted;
-      await expect(cookInstance.connect(addr1).addMultipleAddressWithAllocations([await addr2.getAddress()], [2000])).to.be.reverted;
+      await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr2.getAddress(), 2000, 0)).to.be.reverted;
+      await expect(cookInstance.connect(addr1).addMultipleAddressWithAllocations([await addr2.getAddress()], [2000], [0])).to.be.reverted;
       await expect(cookInstance.connect(addr1).getTotalAvailable()).to.be.reverted;
       await expect(cookInstance.connect(addr1).updatePriceFeed()).to.be.reverted;
       await expect(cookInstance.connect(addr1).blacklistAddress(await addr2.getAddress())).to.be.reverted;
@@ -282,12 +282,12 @@ describe("CookDistribution", () => {
     })
 
     it("others can not add allocation", async () => {
-      await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr3.getAddress(), "1500")).to.be.revertedWith("only manager");
+      await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr3.getAddress(), "1500", "0")).to.be.revertedWith("only manager");
     })
 
     it("address 2 should be registered with right amount", async () => {
       // add allocation for address2
-      await cookInstance.connect(owner).addAddressWithAllocation(await addr2.getAddress(), "1500");
+      await cookInstance.connect(owner).addAddressWithAllocation(await addr2.getAddress(), "1500", "0");
 
       expect(await cookInstance.getRegisteredStatus(await addr2.getAddress())).to.equal(true);
       expect(await cookInstance.getUserVestingAmount(await addr2.getAddress())).to.equal(1500);
@@ -297,7 +297,7 @@ describe("CookDistribution", () => {
       // forward 181 days
       await cookInstance.setToday(TODAY_DAYS + 181);
       // add allocation for address3
-      await cookInstance.connect(owner).addAddressWithAllocation(await addr3.getAddress(), "2000");
+      await cookInstance.connect(owner).addAddressWithAllocation(await addr3.getAddress(), "2000", "0");
 
       expect(await cookInstance.getRegisteredStatus(await addr3.getAddress())).to.equal(true);
       expect(await cookInstance.getUserVestingAmount(await addr3.getAddress())).to.equal(2000);
@@ -312,15 +312,15 @@ describe("CookDistribution", () => {
 
       expect(await cookInstance.connect(owner).getTotalAvailable()).to.equal(500);
 
-      await expect(cookInstance.connect(owner).addAddressWithAllocation(await addr3.getAddress(), "1500")).to.be.reverted;
+      await expect(cookInstance.connect(owner).addAddressWithAllocation(await addr3.getAddress(), "1500", "0")).to.be.reverted;
     })
 
     it("add address2 and address3 after 180 days", async () => {
       // forward 181 days
       await cookInstance.setToday(TODAY_DAYS + 181);
-      await expect(cookInstance.connect(owner).addMultipleAddressWithAllocations([await addr2.getAddress(), await addr2.getAddress()], ["4000", "2000"])).to.be.reverted;
+      await expect(cookInstance.connect(owner).addMultipleAddressWithAllocations([await addr2.getAddress(), await addr2.getAddress()], ["4000", "2000"], ["0", "0"])).to.be.reverted;
       // add allocation for address3 and address2
-      await cookInstance.connect(owner).addMultipleAddressWithAllocations([await addr2.getAddress(), await addr3.getAddress()], ["4000", "2000"]);
+      await cookInstance.connect(owner).addMultipleAddressWithAllocations([await addr2.getAddress(), await addr3.getAddress()], ["4000", "2000"], ["0", "0"]);
 
       expect(await cookInstance.getRegisteredStatus(await addr2.getAddress())).to.equal(true);
       expect(await cookInstance.getUserVestingAmount(await addr2.getAddress())).to.equal(4000);
@@ -344,7 +344,7 @@ describe("CookDistribution", () => {
 
       expect(await cookInstance.connect(owner).getTotalAvailable()).to.equal(500);
 
-      await expect(cookInstance.connect(owner).addMultipleAddressWithAllocations([await addr3.getAddress()], ["1500"])).to.be.reverted;
+      await expect(cookInstance.connect(owner).addMultipleAddressWithAllocations([await addr3.getAddress()], ["1500"], ["0"])).to.be.reverted;
     })
   })
 
