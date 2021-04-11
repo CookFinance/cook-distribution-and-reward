@@ -36,12 +36,4 @@ contract MockCookDistribution is CookDistribution {
     function today() public view override returns (uint256 dayNumber) {
         return _today;
     }
-
-    function getPricePercentageMappingE(uint256 priceKey)
-        external
-        view
-        returns (uint256 value)
-    {
-        return super._getPricePercentage(priceKey);
-    }
 }

@@ -104,8 +104,6 @@ describe("CookDistribution", () => {
     it("distributor initilized successfully", async () => {
       expect(await cookInstance.getUserVestingAmount(await addr1.getAddress())).to.equal(1200);
       expect(await cookInstance.startDay()).to.equal(TODAY_DAYS);
-      expect(await cookInstance.duration()).to.equal(360);
-
     });
 
     it("can shift time", async () => {
@@ -131,17 +129,20 @@ describe("CookDistribution", () => {
 
     it("grant manager role to an address", async () => {
       await expect(cookInstance.connect(addr1).setPriceBasedMaxStep(1000)).to.be.reverted;
-      await expect(cookInstance.connect(addr1).getPriceBasedMaxSetp()).to.be.reverted;
-      await expect(cookInstance.connect(addr1).getNextPriceUnlockStep()).to.be.reverted;
       await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr2.getAddress(), 2000)).to.be.reverted;
       await expect(cookInstance.connect(addr1).addMultipleAddressWithAllocations([await addr2.getAddress()], [2000])).to.be.reverted;
-      await expect(cookInstance.connect(addr1).updatePricePercentage([10], [2000])).to.be.reverted;
       await expect(cookInstance.connect(addr1).getTotalAvailable()).to.be.reverted;
       await expect(cookInstance.connect(addr1).updatePriceFeed()).to.be.reverted;
       await expect(cookInstance.connect(addr1).blacklistAddress(await addr2.getAddress())).to.be.reverted;
       await expect(cookInstance.connect(addr1).removeAddressFromBlacklist(await addr2.getAddress())).to.be.reverted;
       await expect(cookInstance.connect(addr1).pauseClaim()).to.be.reverted;
       await expect(cookInstance.connect(addr1).resumeCliam()).to.be.reverted;
+
+      await expect(cookInstance.connect(addr1).setAdvancePercentage(1000)).to.be.reverted;
+      await expect(cookInstance.connect(addr1).setStart(1000)).to.be.reverted;
+      await expect(cookInstance.connect(addr1).setDuration(10000)).to.be.reverted;
+      await expect(cookInstance.connect(addr1).setInvertal(10000)).to.be.reverted;
+      await expect(cookInstance.connect(addr1).setInvertal(10000)).to.be.reverted;
 
       await expect(cookInstance.connect(addr1).grantRole(await cookInstance.MANAGER_ROLE(), await addr2.getAddress())).to.be.reverted; 
       await expect(cookInstance.connect(addr1).grantRole(await cookInstance.ADMIN_ROLE(), await addr2.getAddress())).to.be.reverted; 
@@ -235,7 +236,7 @@ describe("CookDistribution", () => {
     })
 
     it("Will fail for someone not owner trying to get total available", async () => {
-      await expect(cookInstance.connect(addr1).getTotalAvailable()).to.be.revertedWith("Caller is not a manager");
+      await expect(cookInstance.connect(addr1).getTotalAvailable()).to.be.revertedWith("only manager");
     })
 
     it("has right availableBalance after withdraw + new vested", async () => {
@@ -246,14 +247,14 @@ describe("CookDistribution", () => {
 
     it("Admin pause and resume claim", async () => {
       await cookInstance.connect(owner).pauseClaim();
-      await expect(cookInstance.connect(addr1).withdraw(30)).to.be.revertedWith("Cook token is not claimable due to emgergency");
+      await expect(cookInstance.connect(addr1).withdraw(30)).to.be.revertedWith("Not claimable due to emgergency");
 
       await cookInstance.connect(owner).resumeCliam();
       await expect(cookInstance.connect(addr1).withdraw(30))
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal(40);
 
       await cookInstance.connect(owner).blacklistAddress(await addr1.getAddress());
-      await expect(cookInstance.connect(addr1).withdraw(40)).to.be.revertedWith("Your address is blacklisted");
+      await expect(cookInstance.connect(addr1).withdraw(40)).to.be.revertedWith("You're blacklisted");
 
       await cookInstance.connect(owner).removeAddressFromBlacklist(await addr1.getAddress());
       await expect(cookInstance.connect(addr1).withdraw(40))
@@ -281,7 +282,7 @@ describe("CookDistribution", () => {
     })
 
     it("others can not add allocation", async () => {
-      await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr3.getAddress(), "1500")).to.be.revertedWith("Caller is not a manager");
+      await expect(cookInstance.connect(addr1).addAddressWithAllocation(await addr3.getAddress(), "1500")).to.be.revertedWith("only manager");
     })
 
     it("address 2 should be registered with right amount", async () => {
@@ -368,7 +369,7 @@ describe("CookDistribution", () => {
 
     it("only owner can update price feed", async () => {
       await oracle.connect(addr1).set("5000");
-      await expect(cookInstance.connect(addr1).updatePriceFeed()).to.be.revertedWith("Caller is not a manager");
+      await expect(cookInstance.connect(addr1).updatePriceFeed()).to.be.revertedWith("only manager");
     })
 
     it("after update price", async () => {
@@ -376,8 +377,6 @@ describe("CookDistribution", () => {
       // _percentageValue = [1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100];
 
       //admin function
-      expect(await cookInstance.connect(owner).getPriceBasedMaxSetp()).to.equal(1);
-      await expect(cookInstance.connect(addr1).getPriceBasedMaxSetp()).to.be.reverted;
 
       await oracle.connect(owner).set("1000000000000000000");
       await priceConsumer.connect(owner).set("510000");
@@ -422,7 +421,6 @@ describe("CookDistribution", () => {
       await priceConsumer.connect(owner).set("6900000");
       await cookInstance.setToday(TODAY_DAYS + 8);
       await cookInstance.connect(owner).updatePriceFeed();
-      expect(await cookInstance.connect(owner).getNextPriceUnlockStep()).to.equal(1);
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal(12);
 
 
@@ -434,7 +432,6 @@ describe("CookDistribution", () => {
       }
 
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal(60);
-      expect(await cookInstance.connect(owner).getNextPriceUnlockStep()).to.equal(2);
 
       for (let i = 18; i < 62; i++) {
         await oracle.connect(owner).set("1000000000000000000");
@@ -442,7 +439,6 @@ describe("CookDistribution", () => {
         await cookInstance.setToday(TODAY_DAYS + i);
         await cookInstance.connect(owner).updatePriceFeed();
       }
-      expect(await cookInstance.connect(owner).getNextPriceUnlockStep()).to.equal(4);
 
       await oracle.connect(owner).set("1000000000000000000");
       await priceConsumer.connect(owner).set("1400001");
@@ -466,7 +462,6 @@ describe("CookDistribution", () => {
         await cookInstance.setToday(TODAY_DAYS + i);
         await cookInstance.connect(owner).updatePriceFeed();
       }
-      expect(await cookInstance.connect(owner).getNextPriceUnlockStep()).to.equal(6);
 
       await cookInstance.setToday(TODAY_DAYS + 301);
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal(1000);
@@ -488,22 +483,6 @@ describe("CookDistribution", () => {
       await token.transfer(cookInstance.address, '1000000');
 
     });
-
-    it("has correct init value", async () => {
-      expect(await cookInstance.getPricePercentageMappingE(500000)).to.equal(1);
-    })
-
-    it("has correct after update", async () => {
-      await cookInstance.connect(owner).updatePricePercentage([600000, 700000, 800000], [10, 11, 12]);
-      expect(await cookInstance.getPricePercentageMappingE(600000)).to.equal(10);
-    })
-
-    it("has correct after update existing key", async () => {
-      expect(await cookInstance.getPricePercentageMappingE(800000)).to.equal(5);
-      await cookInstance.connect(owner).updatePricePercentage([400000, 800000, 1100000, 1400000, 1700000, 2000000, 2300000, 2600000, 2900000, 3200000, 3500000, 3800000, 4100000, 4400000, 4700000, 5000000, 5300000, 5600000, 5900000, 6200000, 6500000], [3, 8, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]);
-      expect(await cookInstance.getPricePercentageMappingE(800000)).to.equal(8);
-      expect(await cookInstance.getPricePercentageMappingE(400000)).to.equal(3);
-    })
   })
 
 })

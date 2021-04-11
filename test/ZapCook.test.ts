@@ -189,7 +189,7 @@ describe("Zap Cook", () => {
       await this.cookDistribution.connect(addr1).zapCook('100000000000000000000', this.cookPool.address);
 
       await cookInstance.connect(owner).blacklistAddress(await addr1.getAddress());
-      await expect(cookInstance.connect(addr1).zapCook('100000000000000000000', this.cookPool.address)).to.be.revertedWith("Your address is blacklisted");
+      await expect(cookInstance.connect(addr1).zapCook('100000000000000000000', this.cookPool.address)).to.be.revertedWith("You're blacklisted");
 
       await cookInstance.connect(owner).removeAddressFromBlacklist(await addr1.getAddress());
       await this.cookDistribution.connect(addr1).zapCook('100000000000000000000', this.cookPool.address);

@@ -228,7 +228,7 @@ describe("Zap Uni", () => {
       await this.cookDistribution.connect(addr1).zapLP('100000000000000000000', this.pool.address);
 
       await cookInstance.connect(owner).blacklistAddress(await addr1.getAddress());
-      await expect(cookInstance.connect(addr1).zapLP('100000000000000000000', this.pool.address)).to.be.revertedWith("Your address is blacklisted");
+      await expect(cookInstance.connect(addr1).zapLP('100000000000000000000', this.pool.address)).to.be.revertedWith("You're blacklisted");
 
       await cookInstance.connect(owner).removeAddressFromBlacklist(await addr1.getAddress());
       await this.weth.connect(addr1).approve(this.cookDistribution.address, '10000000000000000');

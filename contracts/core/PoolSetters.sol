@@ -107,37 +107,37 @@ contract PoolSetters is PoolState, PoolGetters {
     // Admin Functions
     // Put an evil address into blacklist
     function blacklistAddress(address addr) public {
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+        require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
         _state.accounts[addr].isBlacklisted = true;
     }
 
     //Remove an address from blacklist
     function removeAddressFromBlacklist(address addr) public {
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+        require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
         _state.accounts[addr].isBlacklisted = false;
     }
 
     // Pause all liquidity mining program
     function pauseMinigReward() public {
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+        require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
         _state.pauseMinig = true;
         _state.REWARD_PER_BLOCK = 0;
     }
 
     // resume liquidity mining program
     function resumeMiningReward(uint256 rewardPerBlock) public {
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+        require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
         _state.pauseMinig = false;
         _state.REWARD_PER_BLOCK = rewardPerBlock;
     }
 
     function setTotalPoolCapLimit(uint256 totalPoolCapLimit) public {
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+        require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
         _state.totalPoolCapLimit = totalPoolCapLimit;
     }
 
     function setStakeLimitPerAddress(uint256 stakeLimitPerAddress) public {
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+        require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
         _state.stakeLimitPerAddress = stakeLimitPerAddress;
     }
 }

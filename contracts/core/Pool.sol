@@ -292,7 +292,7 @@ contract Pool is PoolSetters, IPool {
 
     // set cook token reward per block
     function setRewardPerBlock(uint256 rewardPerBlock) public {
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+        require(hasRole(MANAGER_ROLE, msg.sender), "only manager");
         calculateNewRewardSinceLastRewardBlock();
         _state.REWARD_PER_BLOCK = rewardPerBlock;
     }
