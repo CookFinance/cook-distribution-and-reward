@@ -31,8 +31,16 @@ contract BountyDetective is Ownable {
         return unlockTimestamp;
     }
 
+    function setUnlockTimestamp(uint256 _unlockTimestamp) public onlyOwner {
+        unlockTimestamp = _unlockTimestamp;
+    }
+
     function getDetectiveAddress() public view returns (address) {
         return detectiveAddress;
+    }
+
+    function setDetectiveAddress(address _detectiveAddress) public onlyOwner {
+        detectiveAddress = _detectiveAddress;
     }
 
     function getTokenAddress() public view returns (IERC20) {
