@@ -3,8 +3,6 @@
 **/artifacts
 **/typechain
 
-hardhat.config.ts
-
 node_modules
 
 #Hardhat files

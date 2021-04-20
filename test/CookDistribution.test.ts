@@ -200,7 +200,7 @@ describe("CookDistribution", () => {
 
     it("Admin emgergency withdraw all Cook", async () => {
       await expect(cookInstance.connect(addr1).emergencyWithdraw(1000000)).to.be.reverted;
-      await expect(cookInstance.connect(owner).emergencyWithdraw(1000000))
+      await cookInstance.connect(owner).emergencyWithdraw(1000000);
       expect(await token.balanceOf(cookInstance.address)).to.equal(0)
     })
   })
@@ -250,14 +250,14 @@ describe("CookDistribution", () => {
       await expect(cookInstance.connect(addr1).withdraw(30)).to.be.revertedWith("Not claimable due to emgergency");
 
       await cookInstance.connect(owner).resumeCliam();
-      await expect(cookInstance.connect(addr1).withdraw(30))
+      await cookInstance.connect(addr1).withdraw(30);
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal(40);
 
       await cookInstance.connect(owner).blacklistAddress(await addr1.getAddress());
       await expect(cookInstance.connect(addr1).withdraw(40)).to.be.revertedWith("You're blacklisted");
 
       await cookInstance.connect(owner).removeAddressFromBlacklist(await addr1.getAddress());
-      await expect(cookInstance.connect(addr1).withdraw(40))
+      await cookInstance.connect(addr1).withdraw(40);
       expect(await cookInstance.getUserAvailableAmount(await addr1.getAddress(), 0)).to.equal(0);
     })
   })
