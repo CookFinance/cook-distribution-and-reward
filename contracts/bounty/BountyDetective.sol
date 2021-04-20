@@ -1,13 +1,12 @@
 pragma solidity ^0.6.2;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 /**
  * @title Bounty Detective
  * @dev Bounty Detective address claim the tokens in the contract 180 days after TGE.
  */
-contract BountyDetective is Ownable {
+contract BountyDetective {
     using SafeERC20 for IERC20;
 
     event Claim(address claimer, uint256 amount);
@@ -31,16 +30,8 @@ contract BountyDetective is Ownable {
         return unlockTimestamp;
     }
 
-    function setUnlockTimestamp(uint256 _unlockTimestamp) public onlyOwner {
-        unlockTimestamp = _unlockTimestamp;
-    }
-
     function getDetectiveAddress() public view returns (address) {
         return detectiveAddress;
-    }
-
-    function setDetectiveAddress(address _detectiveAddress) public onlyOwner {
-        detectiveAddress = _detectiveAddress;
     }
 
     function getTokenAddress() public view returns (IERC20) {
