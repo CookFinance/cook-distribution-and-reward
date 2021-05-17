@@ -99,7 +99,7 @@ contract StakingPools is ReentrancyGuard {
   );
 
   /// @dev The token which will be minted as a reward for staking.
-  IMintableERC20 public reward;
+  IERC20 public reward;
 
   /// @dev The address of reward vesting.
   IRewardVesting public rewardVesting;
@@ -489,11 +489,10 @@ contract StakingPools is ReentrancyGuard {
     _stake.totalUnclaimed = 0;
 
     if(_pool.needVesting){
-      reward.mint(address(this), _claimAmount);
       reward.approve(address(rewardVesting),uint(-1));
       rewardVesting.addEarning(msg.sender,_claimAmount);
     } else {
-      reward.mint(msg.sender, _claimAmount);
+      reward.safeTransfer(msg.sender, _claimAmount);
     }
 
     emit TokensClaimed(msg.sender, _poolId, _claimAmount);

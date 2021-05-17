@@ -40,7 +40,7 @@ describe("StakingPools", () => {
     [deployer, governance, newGovernance, sentinel, newSentinel, ...signers] = await ethers.getSigners();
 
     reward = (await MockCOOKFactory.connect(deployer).deploy(
-      "1000000000000000000"
+      "100000000000000000000000000"
     )) as MockCOOK;
 
     rewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
@@ -52,6 +52,8 @@ describe("StakingPools", () => {
       await sentinel.getAddress(),
       rewardVesting.address
     )) as StakingPools;
+
+     reward.connect(deployer).transfer(pools.address, "1000000000000000000000000"); 
   });
 
   describe("set governance", () => {
