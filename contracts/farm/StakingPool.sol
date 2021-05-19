@@ -31,7 +31,7 @@ import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
 import {IRewardVesting} from "../interfaces/IRewardVesting.sol";
 import {Pool} from "./Pool.sol";
 import {Stake} from "./Stake.sol";
-import {Power} from "./Power.sol";
+import {ReferralPower} from "./ReferralPower.sol";
 
 /// @dev A contract which allows users to stake to farm tokens.
 ///
@@ -44,7 +44,7 @@ contract StakingPools is ReentrancyGuard {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
   using Stake for Stake.Data;
-  using Power for Power.Data;
+  using ReferralPower for ReferralPower.Data;
 
   event PendingGovernanceUpdated(
     address pendingGovernance
@@ -125,8 +125,8 @@ contract StakingPools is ReentrancyGuard {
   /// @dev A mapping of all of the user stakes mapped first by pool and then by address.
   mapping(address => mapping(uint256 => Stake.Data)) private _stakes;
 
-  /// @dev A mapping of all of the user power mapped first by pool and then by address.
-  mapping(address => mapping(uint256 => Power.Data)) private _powers;
+  /// @dev A mapping of all of the user referral power mapped first by pool and then by address.
+  mapping(address => mapping(uint256 => ReferralPower.Data)) private _referralPowers;
 
 
   /// @dev A mapping of userIsKnown mapped first by pool and then by address.
@@ -265,10 +265,10 @@ contract StakingPools is ReentrancyGuard {
     _pool.update(_ctx);
 
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    Power.Data storage _power = _powers[msg.sender][_poolId];
+    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
 
     _stake.update(_pool, _ctx);
-    _power.update(_pool, _ctx);
+    _referralPower.update(_pool, _ctx);
 
     _deposit(_poolId, _depositAmount);
   }
@@ -282,10 +282,10 @@ contract StakingPools is ReentrancyGuard {
     _pool.update(_ctx);
 
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    Power.Data storage _power = _powers[msg.sender][_poolId];
+    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
 
     _stake.update(_pool, _ctx);
-    _power.update(_pool, _ctx);
+    _referralPower.update(_pool, _ctx);
 
     _claim(_poolId);
     _withdraw(_poolId, _withdrawAmount);
@@ -301,10 +301,10 @@ contract StakingPools is ReentrancyGuard {
     _pool.update(_ctx);
 
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    Power.Data storage _power = _powers[msg.sender][_poolId];
+    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
 
     _stake.update(_pool, _ctx);
-    _power.update(_pool, _ctx);
+    _referralPower.update(_pool, _ctx);
 
     _claim(_poolId);
   }
@@ -317,10 +317,10 @@ contract StakingPools is ReentrancyGuard {
     _pool.update(_ctx);
 
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    Power.Data storage _power = _powers[msg.sender][_poolId];
+    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
 
     _stake.update(_pool, _ctx);
-    _power.update(_pool, _ctx);
+    _referralPower.update(_pool, _ctx);
 
     _claim(_poolId);
     _withdraw(_poolId, _stake.totalDeposited);
@@ -416,8 +416,8 @@ contract StakingPools is ReentrancyGuard {
   ///
   /// @return the amount of accumulated power a user has in a pool.
   function getAccumulatedPower(address _account, uint256 _poolId) external view returns (uint256) {
-    Power.Data storage _power = _powers[_account][_poolId];
-    return _power.getUpdatedTotalPower(_pools.get(_poolId), _ctx);
+    ReferralPower.Data storage _referralPower = _referralPowers[_account][_poolId];
+    return _referralPower.getUpdatedTotalReferralPower(_pools.get(_poolId), _ctx);
   }
 
 
@@ -442,11 +442,11 @@ contract StakingPools is ReentrancyGuard {
   function _deposit(uint256 _poolId, uint256 _depositAmount) internal {
     Pool.Data storage _pool = _pools.get(_poolId);
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    Power.Data storage _power = _powers[msg.sender][_poolId];
+    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
 
     _pool.totalDeposited = _pool.totalDeposited.add(_depositAmount);
     _stake.totalDeposited = _stake.totalDeposited.add(_depositAmount);
-    _power.totalDeposited = _power.totalDeposited.add(_depositAmount);
+    _referralPower.totalDeposited = _referralPower.totalDeposited.add(_depositAmount);
 
     _pool.token.safeTransferFrom(msg.sender, address(this), _depositAmount);
 
@@ -462,11 +462,11 @@ contract StakingPools is ReentrancyGuard {
   function _withdraw(uint256 _poolId, uint256 _withdrawAmount) internal {
     Pool.Data storage _pool = _pools.get(_poolId);
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    Power.Data storage _power = _powers[msg.sender][_poolId];
+    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
 
     _pool.totalDeposited = _pool.totalDeposited.sub(_withdrawAmount);
     _stake.totalDeposited = _stake.totalDeposited.sub(_withdrawAmount);
-    _power.totalDeposited = _power.totalDeposited.sub(_withdrawAmount);
+    _referralPower.totalDeposited = _referralPower.totalDeposited.sub(_withdrawAmount);
 
     _pool.token.safeTransfer(msg.sender, _withdrawAmount);
 

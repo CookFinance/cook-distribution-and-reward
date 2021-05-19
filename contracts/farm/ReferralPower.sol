@@ -22,27 +22,27 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import {Pool} from "./Pool.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
-/// @title Power
+/// @title ReferralPower
 ///
-/// @dev A library which provides the Power data struct and associated functions.
-library Power {
+/// @dev A library which provides the ReferralPower data struct and associated functions.
+library ReferralPower {
   using FixedPointMath for FixedPointMath.uq192x64;
   using Pool for Pool.Data;
   using SafeMath for uint256;
-  using Power for Power.Data;
+  using ReferralPower for ReferralPower.Data;
 
   struct Data {
     uint256 totalDeposited;
-    uint256 totalPower;
+    uint256 totalReferralPower;
     FixedPointMath.uq192x64 lastAccumulatedWeight;
   }
 
   function update(Data storage _self, Pool.Data storage _pool, Pool.Context storage _ctx) internal {
-    _self.totalPower = _self.getUpdatedTotalPower(_pool, _ctx);
+    _self.totalReferralPower = _self.getUpdatedTotalReferralPower(_pool, _ctx);
     _self.lastAccumulatedWeight = _pool.getUpdatedAccumulatedRewardWeight(_ctx);
   }
 
-  function getUpdatedTotalPower(Data storage _self, Pool.Data storage _pool, Pool.Context storage _ctx)
+  function getUpdatedTotalReferralPower(Data storage _self, Pool.Data storage _pool, Pool.Context storage _ctx)
     internal view
     returns (uint256)
   {
@@ -50,7 +50,7 @@ library Power {
     FixedPointMath.uq192x64 memory _lastAccumulatedWeight = _self.lastAccumulatedWeight;
 
     if (_currentAccumulatedWeight.cmp(_lastAccumulatedWeight) == 0) {
-      return _self.totalPower;
+      return _self.totalReferralPower;
     }
 
     uint256 _distributedAmount = _currentAccumulatedWeight
@@ -58,6 +58,6 @@ library Power {
       .mul(_self.totalDeposited)
       .decode();
 
-    return _self.totalPower.add(_distributedAmount);
+    return _self.totalReferralPower.add(_distributedAmount);
   }
 }
