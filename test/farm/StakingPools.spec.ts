@@ -44,7 +44,7 @@ describe("StakingPools", () => {
     )) as MockCOOK;
 
     rewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-    await rewardVesting.connect(governance).initialize(reward.address,60,300);
+    await rewardVesting.connect(governance).initialize(reward.address);
 
     pools = (await StakingPoolsFactory.connect(deployer).deploy(
       reward.address,
@@ -194,7 +194,7 @@ describe("StakingPools", () => {
    
     it("only allows governance or sentinel to call", async () => {
       let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-      await newRewardVesting.connect(governance).initialize(reward.address,120,600);
+      await newRewardVesting.connect(governance).initialize(reward.address);
 
       expect(pools.setRewardVesting(newRewardVesting.address)).revertedWith(
         "StakingPools: not paused, or not governance or sentinel"
@@ -207,7 +207,7 @@ describe("StakingPools", () => {
 
       it("only allows in the pause mode", async () => {
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address,120,600);
+        await newRewardVesting.connect(governance).initialize(reward.address);
   
         expect(pools.setRewardVesting(newRewardVesting.address)).revertedWith(
           "StakingPools: not paused, or not governance or sentinel"
@@ -218,7 +218,7 @@ describe("StakingPools", () => {
       it("set reward vesting to new contract", async () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address,120,600);
+        await newRewardVesting.connect(governance).initialize(reward.address);
 
         await pools.setRewardVesting(newRewardVesting.address);
         expect(await pools.rewardVesting()).equal(newRewardVesting.address);
@@ -227,7 +227,7 @@ describe("StakingPools", () => {
       it("emits RewardVestingUpdated event", async () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address,120,600);
+        await newRewardVesting.connect(governance).initialize(reward.address);
 
         expect(pools.setRewardVesting(newRewardVesting.address))
           .emit(pools, "RewardVestingUpdated")
@@ -240,7 +240,7 @@ describe("StakingPools", () => {
 
       it("only allows in the pause mode", async () => {
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address,120,600);
+        await newRewardVesting.connect(governance).initialize(reward.address);
   
         expect(pools.setRewardVesting(newRewardVesting.address)).revertedWith(
           "StakingPools: not paused, or not governance or sentinel"
@@ -251,7 +251,7 @@ describe("StakingPools", () => {
       it("set reward vesting to new contract", async () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address,120,600);
+        await newRewardVesting.connect(governance).initialize(reward.address);
 
         await pools.setRewardVesting(newRewardVesting.address);
         expect(await pools.rewardVesting()).equal(newRewardVesting.address);
@@ -260,7 +260,7 @@ describe("StakingPools", () => {
       it("emits RewardVestingUpdated event", async () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address,120,600);
+        await newRewardVesting.connect(governance).initialize(reward.address);
 
         expect(pools.setRewardVesting(newRewardVesting.address))
           .emit(pools, "RewardVestingUpdated")
@@ -279,7 +279,7 @@ describe("StakingPools", () => {
     });
 
     it("only allows governance to call", async () => {
-      expect(pools.createPool(token.address,true)).revertedWith(
+      expect(pools.createPool(token.address,true, 300)).revertedWith(
         "StakingPools: only governance"
       );
     });
@@ -288,15 +288,15 @@ describe("StakingPools", () => {
       beforeEach(async () => (pools = pools.connect(governance)));
 
       it("emits PoolCreated event", async () => {
-        expect(pools.createPool(token.address,true))
+        expect(pools.createPool(token.address,true, 300))
           .emit(pools, "PoolCreated")
           .withArgs(0, token.address);
       });
 
       context("when reusing token", async () => {
         it("reverts", async () => {
-          await pools.createPool(token.address,true);
-          expect(pools.createPool(token.address,true)).revertedWith("StakingPools: token already has a pool");
+          await pools.createPool(token.address,true,300);
+          expect(pools.createPool(token.address,true,300)).revertedWith("StakingPools: token already has a pool");
         });
       });
     });
@@ -350,7 +350,7 @@ describe("StakingPools", () => {
         });
 
         beforeEach(async () => {
-          await pools.connect(governance).createPool(token.address,true);
+          await pools.connect(governance).createPool(token.address,true,300);
         });
 
         shouldBehaveLikeSetRewardWeights([10000]);
@@ -375,7 +375,7 @@ describe("StakingPools", () => {
           for (let n = 0; n < numberPools; n++) {
             await pools
               .connect(governance)
-              .createPool(tokens[n].address,true);
+              .createPool(tokens[n].address,true,300);
           }
         });
 
@@ -399,7 +399,7 @@ describe("StakingPools", () => {
       token = (await MockCOOKFactory.connect(deployer).deploy(
         "1000000000000000000"
       )) as MockCOOK;
-      await pools.connect(governance).createPool(token.address,true);
+      await pools.connect(governance).createPool(token.address,true,300);
       await pools.connect(governance).setRewardWeights([1]);
     });
 
@@ -484,7 +484,7 @@ describe("StakingPools", () => {
         "1000000000000000000"
       )) as MockCOOK;
 
-      await pools.connect(governance).createPool(token.address,true);
+      await pools.connect(governance).createPool(token.address,true,300);
       await pools.connect(governance).setRewardWeights([1]);
     });
 
@@ -582,7 +582,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true);
+      await pools.createPool(token.address,true,300);
       await pools.setRewardWeights([rewardWeight]);
     });
 
@@ -636,7 +636,7 @@ describe("StakingPools", () => {
           ).deploy(await governance.getAddress())) as RewardVesting;
           await newRewardVesting
             .connect(governance)
-            .initialize(reward.address, 120, 600);
+            .initialize(reward.address);
           await pools.setRewardVesting(newRewardVesting.address);
           await pools.connect(governance).setPause(false);
 
@@ -714,7 +714,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true);
+      await pools.createPool(token.address,true,300);
       await pools.setRewardWeights([rewardWeight]);
     });
 
@@ -822,7 +822,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,false);
+      await pools.createPool(token.address,false,0);
       await pools.setRewardWeights([rewardWeight]);
     });
 
@@ -907,7 +907,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true);
+      await pools.createPool(token.address,true,300);
       await pools.setRewardWeights([rewardWeight]);
       await pools.setRewardRate(rewardRate);
     });
@@ -984,7 +984,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true);
+      await pools.createPool(token.address,true,300);
       await pools.setRewardWeights([rewardWeight]);
       await pools.setRewardRate(rewardRate);
     });

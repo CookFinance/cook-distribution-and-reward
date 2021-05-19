@@ -40,11 +40,6 @@ contract RewardVesting {
     }
     mapping(address => LockedBalance[]) private _userEarnings;
 
-    // Duration of vesting penalty period
-
-    uint256 public duration = 86400;
-    uint256 public vesting = duration * 90;
-
     struct Balances {
         uint256 earned;
     }
@@ -79,11 +74,9 @@ contract RewardVesting {
     /*
      * Owner methods
      */
-    function initialize(IERC20 _cookReward, uint256 _duration, uint256 _vesting) external onlyGovernance {
+    function initialize(IERC20 _cookReward) external onlyGovernance {
 
         cookReward = _cookReward;
-        duration = _duration;
-        vesting = _vesting;
     }
 
     modifier onlyGovernance() {
@@ -122,16 +115,16 @@ contract RewardVesting {
      * Add earning from other accounts, which will be locked for 3 months.
      * Early exit is allowed, by 50% will be penalty.
      */
-    function addEarning(address user, uint256 amount) external {
-        _addPendingEarning(user, amount);
+    function addEarning(address user, uint256 amount, uint256 durationInSecs) external {
+        _addPendingEarning(user, amount, durationInSecs);
         cookReward.safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    function _addPendingEarning(address user, uint256 amount) internal {
+    function _addPendingEarning(address user, uint256 amount, uint256 durationInSecs) internal {
         Balances storage bal = userBalances[user];
         bal.earned = bal.earned.add(amount);
 
-        uint256 unlockTime = block.timestamp.div(duration).mul(duration).add(vesting);
+        uint256 unlockTime = block.timestamp.add(durationInSecs);
         LockedBalance[] storage earnings = _userEarnings[user];
         uint256 idx = earnings.length;
 

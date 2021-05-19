@@ -47,6 +47,7 @@ library Pool {
     FixedPointMath.uq192x64 accumulatedRewardWeight;
     uint256 lastUpdatedBlock;
     bool needVesting;
+    uint256 vestingDurationInSecs;
   }
 
   struct List {

@@ -41,7 +41,7 @@ describe("RewardVesting", () => {
 
     rewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
 
-    await rewardVesting.connect(governance).initialize(reward.address,60,300);
+    await rewardVesting.connect(governance).initialize(reward.address);
 
     await reward.connect(deployer).mint(await mockPool.getAddress(),'100000');
 
@@ -95,11 +95,8 @@ describe("RewardVesting", () => {
         const EPSILON: number = 2;
         const rewardAmount: number = 50000;
 
-        expect(await rewardVesting.duration()).equal(60);
-        expect(await rewardVesting.vesting()).equal(300);
-
         expect(await reward.balanceOf(rewardVesting.address)).equal(0);
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount);
         expect(await reward.balanceOf(await mockPool.getAddress())).equal(100000 - rewardAmount);
@@ -119,11 +116,8 @@ describe("RewardVesting", () => {
         const EPSILON: number = 5;
         const rewardAmount: number = 10000;
 
-        expect(await rewardVesting.duration()).equal(60);
-        expect(await rewardVesting.vesting()).equal(300);
-
         expect(await reward.balanceOf(rewardVesting.address)).equal(0);
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount);
         expect(await reward.balanceOf(await mockPool.getAddress())).equal(100000 - rewardAmount);
@@ -138,7 +132,7 @@ describe("RewardVesting", () => {
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['penaltyAmount'])).gte(rewardAmount/2).lte(rewardAmount/2 + EPSILON);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount);
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount*2);
 
@@ -159,11 +153,8 @@ describe("RewardVesting", () => {
         const EPSILON: number = 5;
         const rewardAmount: number = 10000;
 
-        expect(await rewardVesting.duration()).equal(60);
-        expect(await rewardVesting.vesting()).equal(300);
-
         expect(await reward.balanceOf(rewardVesting.address)).equal(0);
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount);
         expect(await reward.balanceOf(await mockPool.getAddress())).equal(100000 - rewardAmount);
@@ -178,7 +169,7 @@ describe("RewardVesting", () => {
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['penaltyAmount'])).gte(rewardAmount/2).lte(rewardAmount/2 + EPSILON);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount);
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount*2);
 
@@ -209,7 +200,7 @@ describe("RewardVesting", () => {
       const rewardAmount: number = 10000;
 
       beforeEach(async () => {
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
       });
 
       it("reverts when withdraw earning more than available", async () => {
@@ -225,7 +216,7 @@ describe("RewardVesting", () => {
 
         expect(await rewardVesting.connect(player).accumulatedPenalty()).equal(rewardAmount - 5000);
 
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 2*rewardAmount);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 2*rewardAmount, 300);
 
         await rewardVesting.connect(player).withdrawEarning(10000);
 
@@ -254,12 +245,12 @@ describe("RewardVesting", () => {
     context("multiple player", async () => {
 
       it("will be correct after multiple player with multiple actions", async () => {
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 10000);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 10000, 300);
 
         await increaseTime(ethers.provider, 100);
         await mineBlocks(ethers.provider,1);
 
-        await rewardVesting.connect(mockPool).addEarning(await player2.getAddress(), 10000);
+        await rewardVesting.connect(mockPool).addEarning(await player2.getAddress(), 10000, 300);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(20000);
 
@@ -278,8 +269,8 @@ describe("RewardVesting", () => {
         expect(await reward.balanceOf(await player.getAddress())).equal(7500);
         expect(await reward.balanceOf(await player2.getAddress())).equal(500);
 
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 10000);
-        await rewardVesting.connect(mockPool).addEarning(await player2.getAddress(), 5000);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 10000, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player2.getAddress(), 5000, 300);
 
         await increaseTime(ethers.provider, 100);
         await mineBlocks(ethers.provider,1);

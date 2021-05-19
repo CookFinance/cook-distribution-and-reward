@@ -207,7 +207,7 @@ contract StakingPools is ReentrancyGuard {
   }
 
   /// @dev Creates a new pool.
-  function createPool(IERC20 _token, bool _needVesting) external onlyGovernance returns (uint256) {
+  function createPool(IERC20 _token, bool _needVesting, uint256 durationInSecs) external onlyGovernance returns (uint256) {
     require(tokenPoolIds[_token] == 0, "StakingPools: token already has a pool");
 
     uint256 _poolId = _pools.length();
@@ -218,7 +218,8 @@ contract StakingPools is ReentrancyGuard {
       rewardWeight: 0,
       accumulatedRewardWeight: FixedPointMath.uq192x64(0),
       lastUpdatedBlock: block.number,
-      needVesting: _needVesting
+      needVesting: _needVesting,
+      vestingDurationInSecs: durationInSecs
     }));
 
     tokenPoolIds[_token] = _poolId + 1;
@@ -490,7 +491,7 @@ contract StakingPools is ReentrancyGuard {
 
     if(_pool.needVesting){
       reward.approve(address(rewardVesting),uint(-1));
-      rewardVesting.addEarning(msg.sender,_claimAmount);
+      rewardVesting.addEarning(msg.sender, _claimAmount, _pool.vestingDurationInSecs);
     } else {
       reward.safeTransfer(msg.sender, _claimAmount);
     }

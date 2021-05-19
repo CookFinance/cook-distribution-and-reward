@@ -16,6 +16,6 @@
 pragma solidity ^0.6.2;
 
 interface IRewardVesting  {
-    function addEarning(address user, uint256 amount) external;
+    function addEarning(address user, uint256 amount, uint256 durationInSecs) external;
     function userBalances(address user) external view returns (uint256 bal);
 }
