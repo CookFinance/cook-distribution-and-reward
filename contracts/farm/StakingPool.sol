@@ -128,15 +128,17 @@ contract StakingPools is ReentrancyGuard {
   /// @dev A mapping of all of the user referral power mapped first by pool and then by address.
   mapping(address => mapping(uint256 => ReferralPower.Data)) private _referralPowers;
 
+/// @dev A mapping of all of the referree staker power mapped first by pool and then by referral address.
+  mapping(address => mapping(uint256 => address)) public myReferral;
 
-  /// @dev A mapping of userIsKnown mapped first by pool and then by address.
-  mapping(address => mapping(uint256 => bool)) public userIsKnown;
+  /// @dev A mapping of referralIsKnown mapped first by pool and then by address.
+  mapping(address => mapping(uint256 => bool)) public referralIsKnown;
 
-  /// @dev A mapping of userAddress mapped first by pool and then by nextUser.
-  mapping(uint256 => mapping(uint256 => address)) public userList;
+  /// @dev A mapping of userAddress mapped first by pool and then by nextReferral.
+  mapping(uint256 => mapping(uint256 => address)) public referralList;
 
   /// @dev index record next user index mapped by pool
-  mapping(uint256 => uint256) public nextUser;
+  mapping(uint256 => uint256) public nextReferral;
 
   /// @dev A flag indicating if claim should be halted
   bool public pause;
@@ -162,12 +164,12 @@ contract StakingPools is ReentrancyGuard {
     _;
   }
 
-  ///@dev modifier add users to userlist. Users are indexed in order to keep track of
-  modifier checkIfNewUser(uint256 pid) {
-      if (!userIsKnown[msg.sender][pid]) {
-          userList[nextUser[pid]][pid] = msg.sender;
-          userIsKnown[msg.sender][pid] = true;
-          nextUser[pid]++;
+  ///@dev modifier add referral to referrallist. Users are indexed in order to keep track of
+  modifier checkIfNewReferral(uint256 pid, address referral) {
+      if (!referralIsKnown[referral][pid]) {
+          referralList[nextReferral[pid]][pid] = referral;
+          referralIsKnown[referral][pid] = true;
+          nextReferral[pid]++;
       }
       _;
   }
@@ -219,7 +221,10 @@ contract StakingPools is ReentrancyGuard {
       accumulatedRewardWeight: FixedPointMath.uq192x64(0),
       lastUpdatedBlock: block.number,
       needVesting: _needVesting,
-      vestingDurationInSecs: durationInSecs
+      vestingDurationInSecs: durationInSecs,
+      onReferralBonus: false,
+      totalReferralAmount: 0,
+      accumulatedReferralWeight: FixedPointMath.uq192x64(0)
     }));
 
     tokenPoolIds[_token] = _poolId + 1;
@@ -260,17 +265,28 @@ contract StakingPools is ReentrancyGuard {
   ///
   /// @param _poolId        the pool to deposit tokens into.
   /// @param _depositAmount the amount of tokens to deposit.
-  function deposit(uint256 _poolId, uint256 _depositAmount) external nonReentrant checkIfNewUser(_poolId) {
+  function deposit(uint256 _poolId, uint256 _depositAmount, address referral) external nonReentrant checkIfNewReferral(_poolId, referral) {
     Pool.Data storage _pool = _pools.get(_poolId);
     _pool.update(_ctx);
 
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
-
     _stake.update(_pool, _ctx);
-    _referralPower.update(_pool, _ctx);
 
-    _deposit(_poolId, _depositAmount);
+    address _referral = address(0); // only for var initialization
+    if (_pool.onReferralBonus) {
+      if (referral != address(0)) {
+        require (myReferral[msg.sender][_poolId] == address(0));
+        myReferral[msg.sender][_poolId] = referral;
+      }
+
+      _referral = myReferral[msg.sender][_poolId];
+      if (_referral != address(0)) {
+        ReferralPower.Data storage _referralPower = _referralPowers[_referral][_poolId];
+        _referralPower.update(_pool, _ctx);
+      }
+    }
+
+    _deposit(_poolId, _depositAmount, _referral);
   }
 
   /// @dev Withdraws staked tokens from a pool.
@@ -282,13 +298,17 @@ contract StakingPools is ReentrancyGuard {
     _pool.update(_ctx);
 
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
-
     _stake.update(_pool, _ctx);
-    _referralPower.update(_pool, _ctx);
+
+    address _referral = _pool.onReferralBonus ? myReferral[msg.sender][_poolId] : address(0);
+
+    if (_pool.onReferralBonus && _referral != address(0)) {
+      ReferralPower.Data storage _referralPower = _referralPowers[_referral][_poolId];
+      _referralPower.update(_pool, _ctx);
+    }
 
     _claim(_poolId);
-    _withdraw(_poolId, _withdrawAmount);
+    _withdraw(_poolId, _withdrawAmount, _referral);
   }
 
   /// @dev Claims all rewarded tokens from a pool.
@@ -301,10 +321,8 @@ contract StakingPools is ReentrancyGuard {
     _pool.update(_ctx);
 
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
 
     _stake.update(_pool, _ctx);
-    _referralPower.update(_pool, _ctx);
 
     _claim(_poolId);
   }
@@ -317,13 +335,17 @@ contract StakingPools is ReentrancyGuard {
     _pool.update(_ctx);
 
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
-
     _stake.update(_pool, _ctx);
-    _referralPower.update(_pool, _ctx);
+
+    address _referral = _pool.onReferralBonus ? myReferral[msg.sender][_poolId] : address(0);
+
+    if (_pool.onReferralBonus && _referral != address(0)) {
+      ReferralPower.Data storage _referralPower = _referralPowers[_referral][_poolId];
+      _referralPower.update(_pool, _ctx);
+    }
 
     _claim(_poolId);
-    _withdraw(_poolId, _stake.totalDeposited);
+    _withdraw(_poolId, _stake.totalDeposited, _referral);
   }
 
   /// @dev Gets the rate at which tokens are minted to stakers for all pools.
@@ -365,6 +387,16 @@ contract StakingPools is ReentrancyGuard {
   function getPoolTotalDeposited(uint256 _poolId) external view returns (uint256) {
     Pool.Data storage _pool = _pools.get(_poolId);
     return _pool.totalDeposited;
+  }
+
+  /// @dev Gets the total amount of referreal power in a pool.
+  ///
+  /// @param _poolId the identifier of the pool.
+  ///
+  /// @return the total amount of referreal power in pool.
+  function getPoolTotalReferralAmount(uint256 _poolId) external view returns (uint256) {
+    Pool.Data storage _pool = _pools.get(_poolId);
+    return _pool.totalReferralAmount;
   }
 
   /// @dev Gets the reward weight of a pool which determines how much of the total rewards it receives per block.
@@ -411,18 +443,18 @@ contract StakingPools is ReentrancyGuard {
 
   /// @dev Gets address accumulated power.
   ///
-  /// @param _account The account to get accumulated power.
+  /// @param _referral The referral account to get accumulated power.
   /// @param _poolId  The pool to check for accumulated power.
   ///
   /// @return the amount of accumulated power a user has in a pool.
-  function getAccumulatedPower(address _account, uint256 _poolId) external view returns (uint256) {
-    ReferralPower.Data storage _referralPower = _referralPowers[_account][_poolId];
+  function getAccumulatedReferralPower(address _referral, uint256 _poolId) external view returns (uint256) {
+    ReferralPower.Data storage _referralPower = _referralPowers[_referral][_poolId];
     return _referralPower.getUpdatedTotalReferralPower(_pools.get(_poolId), _ctx);
   }
 
 
   function getPoolUser(uint256 _poolId, uint256 _userIndex) external view returns (address) {
-    return userList[_userIndex][_poolId];
+    return referralList[_userIndex][_poolId];
   }
 
   /// @dev Updates all of the pools.
@@ -439,14 +471,18 @@ contract StakingPools is ReentrancyGuard {
   ///
   /// @param _poolId        the pool to deposit tokens into.
   /// @param _depositAmount the amount of tokens to deposit.
-  function _deposit(uint256 _poolId, uint256 _depositAmount) internal {
+  function _deposit(uint256 _poolId, uint256 _depositAmount, address _referral) internal {
     Pool.Data storage _pool = _pools.get(_poolId);
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
 
     _pool.totalDeposited = _pool.totalDeposited.add(_depositAmount);
     _stake.totalDeposited = _stake.totalDeposited.add(_depositAmount);
-    _referralPower.totalDeposited = _referralPower.totalDeposited.add(_depositAmount);
+
+    if (_pool.onReferralBonus && _referral != address(0)) {
+      ReferralPower.Data storage _referralPower = _referralPowers[_referral][_poolId];
+      _pool.totalReferralAmount = _pool.totalReferralAmount.add(_depositAmount);
+      _referralPower.totalDeposited = _referralPower.totalDeposited.add(_depositAmount);
+    }
 
     _pool.token.safeTransferFrom(msg.sender, address(this), _depositAmount);
 
@@ -459,14 +495,18 @@ contract StakingPools is ReentrancyGuard {
   ///
   /// @param _poolId          The pool to withdraw staked tokens from.
   /// @param _withdrawAmount  The number of tokens to withdraw.
-  function _withdraw(uint256 _poolId, uint256 _withdrawAmount) internal {
+  function _withdraw(uint256 _poolId, uint256 _withdrawAmount, address _referral) internal {
     Pool.Data storage _pool = _pools.get(_poolId);
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-    ReferralPower.Data storage _referralPower = _referralPowers[msg.sender][_poolId];
 
     _pool.totalDeposited = _pool.totalDeposited.sub(_withdrawAmount);
     _stake.totalDeposited = _stake.totalDeposited.sub(_withdrawAmount);
-    _referralPower.totalDeposited = _referralPower.totalDeposited.sub(_withdrawAmount);
+
+    if (_pool.onReferralBonus && _referral != address(0)) {
+      ReferralPower.Data storage _referralPower = _referralPowers[_referral][_poolId];
+      _pool.totalReferralAmount = _pool.totalReferralAmount.sub(_withdrawAmount);
+      _referralPower.totalDeposited = _referralPower.totalDeposited.sub(_withdrawAmount);
+    }
 
     _pool.token.safeTransfer(msg.sender, _withdrawAmount);
 
@@ -531,4 +571,19 @@ contract StakingPools is ReentrancyGuard {
       pause = _pause;
       emit PauseUpdated(_pause);
   }
+
+  function startReferralBonus(uint256 _poolId) external {
+      require(msg.sender == governance || msg.sender == sentinel, "startReferralBonus: !(gov || sentinel)");
+      Pool.Data storage _pool = _pools.get(_poolId);
+      require(_pool.onReferralBonus == false, "referral bonus already on");
+      _pool.onReferralBonus = true;
+  }
+
+  function stoptReferralBonus(uint256 _poolId) external {
+      require(msg.sender == governance || msg.sender == sentinel, "stoptReferralBonus: !(gov || sentinel)");
+      Pool.Data storage _pool = _pools.get(_poolId);
+      require(_pool.onReferralBonus == true, "referral not turned on");
+      _pool.onReferralBonus = false;
+  }
 }
+

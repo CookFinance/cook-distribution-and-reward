@@ -34,27 +34,27 @@ library ReferralPower {
   struct Data {
     uint256 totalDeposited;
     uint256 totalReferralPower;
-    FixedPointMath.uq192x64 lastAccumulatedWeight;
+    FixedPointMath.uq192x64 lastAccumulatedReferralPower;
   }
 
   function update(Data storage _self, Pool.Data storage _pool, Pool.Context storage _ctx) internal {
     _self.totalReferralPower = _self.getUpdatedTotalReferralPower(_pool, _ctx);
-    _self.lastAccumulatedWeight = _pool.getUpdatedAccumulatedRewardWeight(_ctx);
+    _self.lastAccumulatedReferralPower = _pool.getUpdatedAccumulatedReferralWeight(_ctx);
   }
 
   function getUpdatedTotalReferralPower(Data storage _self, Pool.Data storage _pool, Pool.Context storage _ctx)
     internal view
     returns (uint256)
   {
-    FixedPointMath.uq192x64 memory _currentAccumulatedWeight = _pool.getUpdatedAccumulatedRewardWeight(_ctx);
-    FixedPointMath.uq192x64 memory _lastAccumulatedWeight = _self.lastAccumulatedWeight;
+    FixedPointMath.uq192x64 memory _currentAccumulatedReferralPower = _pool.getUpdatedAccumulatedReferralWeight(_ctx);
+    FixedPointMath.uq192x64 memory lastAccumulatedReferralPower = _self.lastAccumulatedReferralPower;
 
-    if (_currentAccumulatedWeight.cmp(_lastAccumulatedWeight) == 0) {
+    if (_currentAccumulatedReferralPower.cmp(lastAccumulatedReferralPower) == 0) {
       return _self.totalReferralPower;
     }
 
-    uint256 _distributedAmount = _currentAccumulatedWeight
-      .sub(_lastAccumulatedWeight)
+    uint256 _distributedAmount = _currentAccumulatedReferralPower
+      .sub(lastAccumulatedReferralPower)
       .mul(_self.totalDeposited)
       .decode();
 

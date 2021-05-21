@@ -45,9 +45,14 @@ library Pool {
     uint256 totalDeposited;
     uint256 rewardWeight;
     FixedPointMath.uq192x64 accumulatedRewardWeight;
+    // for vesting
     uint256 lastUpdatedBlock;
     bool needVesting;
+    // for referral power calculation
     uint256 vestingDurationInSecs;
+    bool onReferralBonus;
+    uint256 totalReferralAmount; // deposited through referral
+    FixedPointMath.uq192x64 accumulatedReferralWeight;
   }
 
   struct List {
@@ -59,6 +64,11 @@ library Pool {
   /// @param _ctx the pool context.
   function update(Data storage _data, Context storage _ctx) internal {
     _data.accumulatedRewardWeight = _data.getUpdatedAccumulatedRewardWeight(_ctx);
+
+    if (_data.onReferralBonus) {
+      _data.accumulatedReferralWeight = _data.getUpdatedAccumulatedReferralWeight(_ctx);
+    }
+
     _data.lastUpdatedBlock = block.number;
   }
 
@@ -106,6 +116,35 @@ library Pool {
     FixedPointMath.uq192x64 memory _rewardWeight = FixedPointMath.fromU256(_distributeAmount).div(_data.totalDeposited);
     return _data.accumulatedRewardWeight.add(_rewardWeight);
   }
+
+  /// @dev Gets the accumulated referral weight of a pool.
+  ///
+  /// @param _ctx the pool context.
+  ///
+  /// @return the accumulated reward weight.
+  function getUpdatedAccumulatedReferralWeight(Data storage _data, Context storage _ctx)
+    internal view
+    returns (FixedPointMath.uq192x64 memory)
+  {
+    if (!_data.onReferralBonus || _data.totalReferralAmount == 0) {
+      return _data.accumulatedReferralWeight;
+    }
+
+    uint256 _elapsedTime = block.number.sub(_data.lastUpdatedBlock);
+    if (_elapsedTime == 0) {
+      return _data.accumulatedReferralWeight;
+    }
+
+    uint256 _rewardRate = _data.getRewardRate(_ctx);
+    uint256 _distributeAmount = _rewardRate.mul(_elapsedTime);
+
+    if (_distributeAmount == 0) {
+      return _data.accumulatedReferralWeight;
+    }
+
+    FixedPointMath.uq192x64 memory _rewardWeight = FixedPointMath.fromU256(_distributeAmount).div(_data.totalReferralAmount);
+    return _data.accumulatedReferralWeight.add(_rewardWeight);
+  }  
 
   /// @dev Adds an element to the list.
   ///
