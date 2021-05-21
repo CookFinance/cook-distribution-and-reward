@@ -126,7 +126,7 @@ library Pool {
     internal view
     returns (FixedPointMath.uq192x64 memory)
   {
-    if (!_data.onReferralBonus || _data.totalReferralAmount == 0) {
+    if (_data.totalReferralAmount == 0) {
       return _data.accumulatedReferralWeight;
     }
 

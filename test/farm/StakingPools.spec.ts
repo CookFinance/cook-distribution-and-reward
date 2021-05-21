@@ -965,6 +965,8 @@ describe("StakingPools", () => {
     let depositAmount = 50000;
     let rewardRate = 5000;
 
+    const EPSILON: number = 5;
+
     beforeEach(async () => {
       [depositor1, depositor2, referral1, referral2, ...signers] = signers;
 
@@ -974,8 +976,8 @@ describe("StakingPools", () => {
     });
 
     beforeEach(async () => {
-      await token.connect(depositor1).mint(await depositor1.getAddress(), 100000000000);
-      await token.connect(depositor2).mint(await depositor2.getAddress(), 100000000000);
+      await token.connect(depositor1).mint(await depositor1.getAddress(), 10000000000000);
+      await token.connect(depositor2).mint(await depositor2.getAddress(), 10000000000000);
 
       await token.connect(depositor1).approve(pools.address, MAXIMUM_U256);
       await token.connect(depositor2).approve(pools.address, MAXIMUM_U256);
@@ -989,6 +991,47 @@ describe("StakingPools", () => {
       await pools.setRewardRate(rewardRate);
     });
 
+    context("Referree can not use different referral", () => {
+      let elapsedBlocks = 100;
+      beforeEach(async () => (pools = pools.connect(depositor1)));
+
+      it("referral can be anything before turned on", async () => {
+        await pools.deposit(0, depositAmount, await referral1.getAddress());
+        await mineBlocks(ethers.provider, elapsedBlocks);
+        await pools.deposit(0, depositAmount, await referral2.getAddress());
+        await mineBlocks(ethers.provider, elapsedBlocks);
+        await pools.deposit(0, depositAmount, await depositor2.getAddress());
+        await mineBlocks(ethers.provider, elapsedBlocks);
+
+        const expectedReward = rewardRate * (elapsedBlocks * 3 + 2)
+        expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedReward - EPSILON);
+      });
+
+      it("referree can not use different referral during competition", async () => {
+        await pools.connect(governance).startReferralBonus(0);
+        await pools.deposit(0, depositAmount, await referral1.getAddress());
+        await mineBlocks(ethers.provider, elapsedBlocks);
+
+        expect(pools.deposit(0, depositAmount, await referral2.getAddress())).revertedWith("referred already");
+      });
+
+      it("referral can by anthing after referral competition tured off", async() => {
+        await pools.connect(governance).startReferralBonus(0);
+        await pools.deposit(0, depositAmount, await referral1.getAddress());
+        await mineBlocks(ethers.provider, elapsedBlocks);
+        await pools.connect(governance).stoptReferralBonus(0);
+        await pools.deposit(0, depositAmount, await referral2.getAddress());
+        await mineBlocks(ethers.provider, elapsedBlocks);
+        await pools.deposit(0, depositAmount, await depositor2.getAddress());
+        await mineBlocks(ethers.provider, elapsedBlocks);
+
+        const expectedReward = rewardRate * (elapsedBlocks * 3 + 3);
+        expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedReward - EPSILON);
+      });
+
+
+    });
+
     context("Referral power should be calculated based on status of referral competition", () => {
       let elapsedBlocks = 100;
       beforeEach(async () => (pools = pools.connect(depositor1)));
@@ -997,8 +1040,18 @@ describe("StakingPools", () => {
         await pools.deposit(0, depositAmount, await referral1.getAddress());
         expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).equal(0);
         expect(await pools.getPoolTotalReferralAmount(0)).equal(0);
+
         await mineBlocks(ethers.provider, elapsedBlocks);
-        
+        expect(await pools.getPoolTotalReferralAmount(0)).equal(0);
+        expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).equal(0);
+      }) 
+
+      it("should get correct referral power after competition turned on", async () => {
+        await pools.deposit(0, depositAmount, await referral1.getAddress());
+        expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).equal(0);
+        expect(await pools.getPoolTotalReferralAmount(0)).equal(0);
+
+        await mineBlocks(ethers.provider, elapsedBlocks);
         await pools.connect(governance).startReferralBonus(0);
         await pools.deposit(0, depositAmount, await referral1.getAddress());
         await mineBlocks(ethers.provider, elapsedBlocks);
@@ -1006,27 +1059,77 @@ describe("StakingPools", () => {
         const expectedDepositReward = rewardRate * (elapsedBlocks + elapsedBlocks + 2);
         const expectedReferralPower = rewardRate * elapsedBlocks
 
-        expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).equal(expectedDepositReward);
+        expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedDepositReward - EPSILON);
+        expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(expectedReferralPower - EPSILON);
+        expect(await pools.getPoolTotalReferralAmount(0)).equal(depositAmount);
+      });
+
+      it("Stop distributing referral power once competition turned off", async () => {
+        await pools.connect(governance).startReferralBonus(0);
+        await pools.deposit(0, depositAmount, await referral1.getAddress());
+
+        await mineBlocks(ethers.provider, elapsedBlocks);
+        const expectedDepositReward = rewardRate * elapsedBlocks;
+        const expectedReferralPower = rewardRate * elapsedBlocks
+        expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedDepositReward - EPSILON);
+        expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(expectedDepositReward - EPSILON);
+        expect(await pools.getPoolTotalReferralAmount(0)).equal(depositAmount);
+
+        await pools.connect(governance).stoptReferralBonus(0);
+        await pools.deposit(0, depositAmount, await referral1.getAddress());
+        
+        await mineBlocks(ethers.provider, elapsedBlocks);
+        const nextExpectedDepositReward = rewardRate * (elapsedBlocks + elapsedBlocks + 2)
+        expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedDepositReward - EPSILON);
         expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).equal(expectedReferralPower);
         expect(await pools.getPoolTotalReferralAmount(0)).equal(depositAmount);
-      }) 
+      });
+    });
+
+    context("referral should get correct accumulated referral power", () => {
+      let elapsedBlocks = 100;
+      beforeEach(async () => (pools = pools.connect(depositor1)));
+
+      it("once referred, referral power should calcuated even address is not given", async() => {
+          await pools.connect(governance).startReferralBonus(0);
+          await pools.deposit(0, depositAmount, await referral1.getAddress());
+          await mineBlocks(ethers.provider, elapsedBlocks);
+
+          await pools.deposit(0, depositAmount, await ZERO_ADDRESS);
+          await mineBlocks(ethers.provider, elapsedBlocks);
+
+          await pools.deposit(0, depositAmount, await ZERO_ADDRESS);
+          await mineBlocks(ethers.provider, elapsedBlocks);
+
+          const expectedDepositReward = rewardRate * (elapsedBlocks * 3 + 2)
+          const expectedReferralPower = rewardRate * (elapsedBlocks * 3 + 2);
+          expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedDepositReward - EPSILON);
+          expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(expectedReferralPower - EPSILON);
+          expect(await pools.getPoolTotalReferralAmount(0)).equal(depositAmount * 3);        
+      });
+
+      it("properly calculates the power after someone claim and withdraw with referral", async() => {
+          await pools.connect(governance).startReferralBonus(0);
+          await pools.deposit(0, depositAmount, await referral1.getAddress());
+          await mineBlocks(ethers.provider, elapsedBlocks);
+          await pools.deposit(0, depositAmount, await ZERO_ADDRESS);
+          await mineBlocks(ethers.provider, elapsedBlocks);
+
+          const expectedReferralPower = rewardRate * (elapsedBlocks * 2 + 1);
+          expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(expectedReferralPower - EPSILON);
+
+          await pools.exit(0)
+          await mineBlocks(ethers.provider, elapsedBlocks * 4);
+          expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(expectedReferralPower - EPSILON);
+      });
     });
 
 
-
-    //   it("should get correct referral power after competition turned on")
-    //   it("Stop distributing referral power once competition turned off")
-    //   it("Deposit should still work correctly once competition turned off");
-    // });
     
-    // context("Referree can not use different referral");
-    //   it("referral can be anything before turned on");
-    //   it("referree can not use differetn referral during competition");
-    //   it("referral can by anthing after referral competition tured off");
 
     // context("referral should get correct accumulated referral power");
     //   it("referral power should calcuated during competition");
-    //   it("once referred, referral power should calcuated even address is not given");
+    //   
     //   it("properly calculates the power after someone claim and withdraw");
     //   it("properly calculates the power after someone claim and withdraw with more players");
     //   it("properly calculates the power after someone claim and exit with more players");

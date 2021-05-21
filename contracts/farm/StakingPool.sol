@@ -275,7 +275,7 @@ contract StakingPools is ReentrancyGuard {
     address _referral = address(0); // only for var initialization
     if (_pool.onReferralBonus) {
       if (referral != address(0)) {
-        require (myReferral[msg.sender][_poolId] == address(0));
+        require (myReferral[msg.sender][_poolId] == address(0), "referred already");
         myReferral[msg.sender][_poolId] = referral;
       }
 
