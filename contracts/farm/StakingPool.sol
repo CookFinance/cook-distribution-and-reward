@@ -18,7 +18,6 @@
 pragma solidity ^0.6.2;
 pragma experimental ABIEncoderV2;
 
-//import "hardhat/console.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -272,10 +271,10 @@ contract StakingPools is ReentrancyGuard {
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
     _stake.update(_pool, _ctx);
 
-    address _referral = address(0); // only for var initialization
+    address _referral = myReferral[msg.sender][_poolId];
     if (_pool.onReferralBonus) {
       if (referral != address(0)) {
-        require (myReferral[msg.sender][_poolId] == address(0), "referred already");
+        require (_referral == address(0) || _referral == referral, "referred already");
         myReferral[msg.sender][_poolId] = referral;
       }
 

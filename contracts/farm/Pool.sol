@@ -81,10 +81,6 @@ library Pool {
     internal view
     returns (uint256)
   {
-    // console.log("get reward rate");
-    // console.log(uint(_data.rewardWeight));
-    // console.log(uint(_ctx.totalRewardWeight));
-    // console.log(uint(_ctx.rewardRate));
     return _ctx.rewardRate.mul(_data.rewardWeight).div(_ctx.totalRewardWeight);
   }
 
@@ -127,6 +123,7 @@ library Pool {
     returns (FixedPointMath.uq192x64 memory)
   {
     if (_data.totalReferralAmount == 0) {
+
       return _data.accumulatedReferralWeight;
     }
 
