@@ -32,6 +32,8 @@ import {Pool} from "./Pool.sol";
 import {Stake} from "./Stake.sol";
 import {ReferralPower} from "./ReferralPower.sol";
 
+// import "hardhat/console.sol";
+
 /// @dev A contract which allows users to stake to farm tokens.
 ///
 /// This contract was inspired by Chef Nomi's 'MasterChef' contract which can be found in this
@@ -165,7 +167,8 @@ contract StakingPools is ReentrancyGuard {
 
   ///@dev modifier add referral to referrallist. Users are indexed in order to keep track of
   modifier checkIfNewReferral(uint256 pid, address referral) {
-      if (!referralIsKnown[referral][pid]) {
+      Pool.Data storage _pool = _pools.get(pid);
+      if (_pool.onReferralBonus && !referralIsKnown[referral][pid]) {
           referralList[nextReferral[pid]][pid] = referral;
           referralIsKnown[referral][pid] = true;
           nextReferral[pid]++;

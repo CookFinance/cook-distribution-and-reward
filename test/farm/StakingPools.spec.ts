@@ -1063,15 +1063,17 @@ describe("StakingPools", () => {
         await pools.deposit(0, depositAmount, await referral1.getAddress());
         expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).equal(0);
         expect(await pools.getPoolTotalReferralAmount(0)).equal(0);
+        expect(await pools.nextReferral(0)).equal(0);
 
         await mineBlocks(ethers.provider, elapsedBlocks);
         await pools.connect(governance).startReferralBonus(0);
         await pools.deposit(0, depositAmount, await referral1.getAddress());
+        
         await mineBlocks(ethers.provider, elapsedBlocks);
-
         const expectedDepositReward = rewardRate * (elapsedBlocks + elapsedBlocks + 2);
         const expectedReferralPower = rewardRate * elapsedBlocks
 
+        expect(await pools.nextReferral(0)).equal(1);
         expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedDepositReward - EPSILON).lte(expectedDepositReward + EPSILON);
         expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(expectedReferralPower - EPSILON).lte(expectedReferralPower + EPSILON);
         expect(await pools.getPoolTotalReferralAmount(0)).equal(depositAmount);
@@ -1087,12 +1089,14 @@ describe("StakingPools", () => {
         expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedDepositReward - EPSILON).lte(expectedDepositReward + EPSILON);
         expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(expectedDepositReward - EPSILON).lte(expectedDepositReward + EPSILON);
         expect(await pools.getPoolTotalReferralAmount(0)).equal(depositAmount);
+        expect(await pools.nextReferral(0)).equal(1);
 
         await pools.connect(governance).stoptReferralBonus(0);
-        await pools.deposit(0, depositAmount, await referral1.getAddress());
+        await pools.deposit(0, depositAmount, await referral2.getAddress());
         
         await mineBlocks(ethers.provider, elapsedBlocks);
         const nextExpectedDepositReward = rewardRate * (elapsedBlocks + elapsedBlocks + 2)
+        expect(await pools.nextReferral(0)).equal(1);
         expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(nextExpectedDepositReward - EPSILON).lte(nextExpectedDepositReward + EPSILON);
         expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).equal(expectedReferralPower);
         expect(await pools.getPoolTotalReferralAmount(0)).equal(depositAmount);
