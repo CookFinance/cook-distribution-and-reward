@@ -43,6 +43,9 @@ async function main() {
 
     const depositors = [depositor1, depositor2, depositor3, depositor4, depositor5, depositor6, depositor7, depositor8];
     const referrals = [referral1, referral2, referral3, referral4, referral5, referral6, referral7, referral8];
+    for (var i = 0; i < referrals.length; i++) {
+      console.log(referrals[i].address);
+    }
     // required contracts' addresses
     // TODO: currently set for Rinkeby testnet. should be changed for different chain
     const WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
@@ -87,10 +90,8 @@ async function main() {
         depositors[i].address,
         Date.now() * 2
       );
-      console.log("======== Depositors added liquidity ============:", i);
     }    
     
-
 
     const StakingPoolsFactory = await ethers.getContractFactory("StakingPools");
     const RewardVestingFactory = await ethers.getContractFactory("RewardVesting");
@@ -118,15 +119,15 @@ async function main() {
     const createdPoolId = await stakingPools.connect(cookLPDeployer).createPool(pairAddress, true, 300);
     await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
     await stakingPools.connect(cookLPDeployer).setRewardWeights([1]);
+    await stakingPools.connect(cookLPDeployer).startReferralBonus(0);
     // console.log("======== pool created tx ========:", createdPoolId)
 
     const CookWETH = await ethers.getContractAt(ERC20ABI, pairAddress);
-    console.log("======== depositor lp balance ========:", await CookWETH.balanceOf(depositors[0].address));
 
 
     for (var i = 0; i < depositors.length; i++) {
       await CookWETH.connect(depositors[i]).approve(stakingPools.address, "10000000000000000000000");
-      await stakingPools.connect(depositors[i]).deposit(0, "1000000000000000" ,referrals[i].address);
+      await stakingPools.connect(depositors[i]).deposit(0, "1000000000000000" , referrals[i].address);
 
       for (var j = 0; j < 50; j++) {
         await hre().network.provider.send("evm_mine", []);
@@ -135,6 +136,11 @@ async function main() {
 
     const numOfReferrals = stakingPools.connect(cookLPDeployer).nextReferral(0);
     console.log("====== pool 0 referrals: ======", (await numOfReferrals).toNumber())
+
+    for (var i = 0; i < referrals.length; i++) {
+      const referralPower = await stakingPools.getAccumulatedReferralPower(referrals[i].address, 0)
+      console.log("====== referral power: =======", referralPower.toBigInt().toString());
+    }
 
 }
 
