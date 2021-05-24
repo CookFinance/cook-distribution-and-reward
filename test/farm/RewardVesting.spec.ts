@@ -25,6 +25,7 @@ describe("RewardVesting", () => {
 
   let rewardVesting: RewardVesting;
   let reward: MockCOOK;
+  let day = 86400
 
 
   before(async () => {
@@ -96,7 +97,7 @@ describe("RewardVesting", () => {
         const rewardAmount: number = 50000;
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(0);
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, day * 5);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount);
         expect(await reward.balanceOf(await mockPool.getAddress())).equal(100000 - rewardAmount);
@@ -104,7 +105,7 @@ describe("RewardVesting", () => {
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['amount'])).gte(rewardAmount/2 - EPSILON).lte(rewardAmount/2);
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['penaltyAmount'])).gte(rewardAmount/2).lte(rewardAmount/2 + EPSILON);
 
-        await increaseTime(ethers.provider, 300);
+        await increaseTime(ethers.provider, day * 5);
         await mineBlocks(ethers.provider,1);
 
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['amount'])).gte(rewardAmount - EPSILON).lte(rewardAmount + EPSILON);
@@ -117,7 +118,7 @@ describe("RewardVesting", () => {
         const rewardAmount: number = 10000;
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(0);
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, day * 5);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount);
         expect(await reward.balanceOf(await mockPool.getAddress())).equal(100000 - rewardAmount);
@@ -125,24 +126,24 @@ describe("RewardVesting", () => {
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['amount'])).gte(rewardAmount/2 - EPSILON).lte(rewardAmount/2);
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['penaltyAmount'])).gte(rewardAmount/2).lte(rewardAmount/2 + EPSILON);
 
-        await increaseTime(ethers.provider, 100);
+        await increaseTime(ethers.provider, day * 1);
         await mineBlocks(ethers.provider,1);
 
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['amount'])).gte(rewardAmount/2 - EPSILON).lte(rewardAmount/2);
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['penaltyAmount'])).gte(rewardAmount/2).lte(rewardAmount/2 + EPSILON);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount);
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, day * 5);
 
-        expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount*2);
+        expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount * 2);
 
-        await increaseTime(ethers.provider, 200);
+        await increaseTime(ethers.provider, day * 4);
         await mineBlocks(ethers.provider,1);
 
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['amount'])).gte(3*rewardAmount/2 - EPSILON).lte(3*rewardAmount/2 + EPSILON);
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['penaltyAmount'])).gte(rewardAmount/2).lte(rewardAmount/2 + EPSILON);
 
-        await increaseTime(ethers.provider, 100);
+        await increaseTime(ethers.provider, day * 1);
         await mineBlocks(ethers.provider,1);
 
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['amount'])).gte(2*rewardAmount - EPSILON).lte(2*rewardAmount + EPSILON);
@@ -154,7 +155,7 @@ describe("RewardVesting", () => {
         const rewardAmount: number = 10000;
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(0);
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, day * 5);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount);
         expect(await reward.balanceOf(await mockPool.getAddress())).equal(100000 - rewardAmount);
@@ -162,14 +163,14 @@ describe("RewardVesting", () => {
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['amount'])).gte(rewardAmount/2 - EPSILON).lte(rewardAmount/2);
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['penaltyAmount'])).gte(rewardAmount/2).lte(rewardAmount/2 + EPSILON);
 
-        await increaseTime(ethers.provider, 100);
+        await increaseTime(ethers.provider, day * 1);
         await mineBlocks(ethers.provider,1);
 
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['amount'])).gte(rewardAmount/2 - EPSILON).lte(rewardAmount/2);
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['penaltyAmount'])).gte(rewardAmount/2).lte(rewardAmount/2 + EPSILON);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount);
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, day * 5);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount*2);
 
@@ -178,13 +179,13 @@ describe("RewardVesting", () => {
         expect(await reward.balanceOf(rewardVesting.address)).equal(rewardAmount*2-4999);
         expect(await reward.balanceOf(await player.getAddress())).equal(4999);
 
-        await increaseTime(ethers.provider, 200);
+        await increaseTime(ethers.provider, day * 4);
         await mineBlocks(ethers.provider,1);
 
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['amount'])).gte(rewardAmount/2 - EPSILON).lte(rewardAmount/2 + EPSILON);
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['penaltyAmount'])).gte(rewardAmount/2).lte(rewardAmount/2 + EPSILON);
 
-        await increaseTime(ethers.provider, 100);
+        await increaseTime(ethers.provider, day * 1);
         await mineBlocks(ethers.provider,1);
 
         expect(((await rewardVesting.connect(mockPool).withdrawableEarning(await player.getAddress()))['amount'])).gte(rewardAmount - EPSILON).lte(rewardAmount + EPSILON);
@@ -200,7 +201,7 @@ describe("RewardVesting", () => {
       const rewardAmount: number = 10000;
 
       beforeEach(async () => {
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), rewardAmount, day * 5);
       });
 
       it("reverts when withdraw earning more than available", async () => {
@@ -216,7 +217,7 @@ describe("RewardVesting", () => {
 
         expect(await rewardVesting.connect(player).accumulatedPenalty()).equal(rewardAmount - 5000);
 
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 2*rewardAmount, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 2*rewardAmount, day * 5);
 
         await rewardVesting.connect(player).withdrawEarning(10000);
 
@@ -245,12 +246,12 @@ describe("RewardVesting", () => {
     context("multiple player", async () => {
 
       it("will be correct after multiple player with multiple actions", async () => {
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 10000, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 10000, day * 5);
 
-        await increaseTime(ethers.provider, 100);
+        await increaseTime(ethers.provider, day * 1);
         await mineBlocks(ethers.provider,1);
 
-        await rewardVesting.connect(mockPool).addEarning(await player2.getAddress(), 10000, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player2.getAddress(), 10000, day * 5);
 
         expect(await reward.balanceOf(rewardVesting.address)).equal(20000);
 
@@ -259,7 +260,7 @@ describe("RewardVesting", () => {
         expect(await rewardVesting.connect(player).accumulatedPenalty()).equal(2500);
         expect(await reward.balanceOf(await player.getAddress())).equal(2500);
 
-        await increaseTime(ethers.provider, 200);
+        await increaseTime(ethers.provider, day * 4);
         await mineBlocks(ethers.provider,1);
 
         await rewardVesting.connect(player).withdrawEarning(5000);
@@ -269,17 +270,17 @@ describe("RewardVesting", () => {
         expect(await reward.balanceOf(await player.getAddress())).equal(7500);
         expect(await reward.balanceOf(await player2.getAddress())).equal(500);
 
-        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 10000, 300);
-        await rewardVesting.connect(mockPool).addEarning(await player2.getAddress(), 5000, 300);
+        await rewardVesting.connect(mockPool).addEarning(await player.getAddress(), 10000, day * 5);
+        await rewardVesting.connect(mockPool).addEarning(await player2.getAddress(), 5000, day * 5);
 
-        await increaseTime(ethers.provider, 100);
+        await increaseTime(ethers.provider, day * 1);
         await mineBlocks(ethers.provider,1);
 
         await rewardVesting.connect(player2).withdrawEarning(9000);
 
         expect(await reward.balanceOf(await player.getAddress())).equal(7500);
 
-        await increaseTime(ethers.provider, 200);
+        await increaseTime(ethers.provider, day * 4);
         await mineBlocks(ethers.provider,1);
 
         await rewardVesting.connect(player).withdrawEarning(10000);

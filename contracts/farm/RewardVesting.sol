@@ -39,6 +39,7 @@ contract RewardVesting {
         uint256 unlockTime;
     }
     mapping(address => LockedBalance[]) private _userEarnings;
+    uint256 public duration = 86400;
 
     struct Balances {
         uint256 earned;
@@ -124,7 +125,7 @@ contract RewardVesting {
         Balances storage bal = userBalances[user];
         bal.earned = bal.earned.add(amount);
 
-        uint256 unlockTime = block.timestamp.add(durationInSecs);
+        uint256 unlockTime = block.timestamp.div(duration).mul(duration).add(durationInSecs);
         LockedBalance[] storage earnings = _userEarnings[user];
         uint256 idx = earnings.length;
 
