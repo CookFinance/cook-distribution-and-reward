@@ -1042,6 +1042,46 @@ describe("StakingPools", () => {
         expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedReward - EPSILON).lte(expectedReward + EPSILON);
       });
 
+      it("My referree should be correct", async() => {
+          await pools.connect(depositor1).deposit(0, depositAmount, await referral1.getAddress());
+          await pools.connect(depositor2).deposit(0, depositAmount, await referral2.getAddress());
+          var refferree1 = await pools.getPoolReferree(0, await referral1.getAddress())
+          var refferree2 = await pools.getPoolReferree(0, await referral2.getAddress())
+          expect(refferree1.length).equal(0);
+          expect(refferree2.length).equal(0);
+
+          await pools.connect(governance).startReferralBonus(0);
+
+          await pools.connect(depositor1).deposit(0, depositAmount, await referral1.getAddress());
+          await pools.connect(depositor2).deposit(0, depositAmount, await referral2.getAddress());
+          refferree1 = await pools.getPoolReferree(0, await referral1.getAddress())
+          refferree2 = await pools.getPoolReferree(0, await referral2.getAddress())
+          expect(refferree1.length).equal(1);
+          expect(refferree2.length).equal(1);
+
+          await pools.connect(depositor1).deposit(0, depositAmount, ZERO_ADDRESS);
+          await pools.connect(depositor2).deposit(0, depositAmount, ZERO_ADDRESS);
+          refferree1 = await pools.getPoolReferree(0, await referral1.getAddress())
+          refferree2 = await pools.getPoolReferree(0, await referral2.getAddress())
+          expect(refferree1.length).equal(1);
+          expect(refferree1[0]).equals(await depositor1.getAddress());
+          expect(refferree2[0]).equals(await depositor2.getAddress());
+      });
+
+      it("Multitple referree with same referral", async() => {
+          await pools.connect(governance).startReferralBonus(0);
+
+          await pools.connect(depositor1).deposit(0, depositAmount, await referral1.getAddress());
+          var refferree1 = await pools.getPoolReferree(0, await referral1.getAddress())
+          expect(refferree1.length).equal(1);
+
+          await pools.connect(depositor2).deposit(0, depositAmount, await referral1.getAddress());
+          refferree1 = await pools.getPoolReferree(0, await referral1.getAddress())
+          expect(refferree1.length).equal(2);
+          expect(refferree1[0]).equals(await depositor1.getAddress());
+          expect(refferree1[1]).equals(await depositor2.getAddress());
+      })
+
 
     });
 
@@ -1060,12 +1100,13 @@ describe("StakingPools", () => {
       }) 
 
       it("should get correct referral power after competition turned on", async () => {
-        await pools.deposit(0, depositAmount, await referral1.getAddress());
         expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).equal(0);
         expect(await pools.getPoolTotalReferralAmount(0)).equal(0);
         expect(await pools.nextReferral(0)).equal(0);
-
+        
+        await pools.deposit(0, depositAmount, await referral1.getAddress());
         await mineBlocks(ethers.provider, elapsedBlocks);
+
         await pools.connect(governance).startReferralBonus(0);
         await pools.deposit(0, depositAmount, await referral1.getAddress());
         
@@ -1172,13 +1213,15 @@ describe("StakingPools", () => {
           expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(referral1Power - EPSILON).lte(referral1Power + EPSILON);
           const referral2Power = rewardRate * (elapsedBlocks * 2 / 2)
           expect(await pools.getAccumulatedReferralPower(await referral2.getAddress(), 0)).gte(referral2Power - EPSILON).lte(referral2Power + EPSILON);
+          expect(await pools.getPoolTotalReferralAmount(0)).equal(depositAmount * 2);  
 
           await pools.connect(depositor2).deposit(0, depositAmount * 2, await referral2.getAddress());
           await mineBlocks(ethers.provider, elapsedBlocks * 2);
-          const next1Referral1Power = referral1Power + rewardRate * (0.5 + elapsedBlocks * 2 / 4);
+          const next1Referral1Power = referral1Power + rewardRate * (0.5 + elapsedBlocks * 2 * 1 / 4);
           expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(next1Referral1Power - rewardRate).lte(next1Referral1Power + rewardRate);
           const next1Referral2Power = referral2Power + rewardRate * (0.5 + elapsedBlocks * 2 * 3 / 4);
           expect(await pools.getAccumulatedReferralPower(await referral2.getAddress(), 0)).gte(next1Referral2Power - rewardRate).lte(next1Referral2Power + rewardRate);
+          expect(await pools.getPoolTotalReferralAmount(0)).equal(depositAmount * 4);  
 
           await pools.connect(depositor2).withdraw(0, depositAmount * 2);
           await mineBlocks(ethers.provider, elapsedBlocks * 2);
@@ -1187,6 +1230,7 @@ describe("StakingPools", () => {
           expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(next2Referral1Power - rewardRate).lte(next2Referral1Power + rewardRate);
           const next2Referral2Power = next1Referral2Power + rewardRate * (0.75 + elapsedBlocks * 2 / 2);
           expect(await pools.getAccumulatedReferralPower(await referral1.getAddress(), 0)).gte(next2Referral2Power - rewardRate).lte(next2Referral2Power + rewardRate);
+          expect(await pools.getPoolTotalReferralAmount(0)).equal(depositAmount * 2);  
       });
 
       it("One referral has multiple referrees", async() => {
