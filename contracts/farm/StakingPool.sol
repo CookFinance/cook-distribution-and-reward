@@ -129,7 +129,7 @@ contract StakingPools is ReentrancyGuard {
   /// @dev A mapping of all of the referral power mapped first by pool and then by address.
   mapping(address => mapping(uint256 => ReferralPower.Data)) private _referralPowers;
 
-/// @dev A mapping of all of the referree staker power mapped first by pool and then by referral address.
+/// @dev A mapping of all of the referee staker power mapped first by pool and then by referral address.
   mapping(address => mapping(uint256 => address)) public myReferral;
 
   /// @dev A mapping of known referrals mapped first by pool and then by address.
@@ -141,8 +141,8 @@ contract StakingPools is ReentrancyGuard {
   /// @dev index record next user index mapped by pool
   mapping(uint256 => uint256) public nextReferral;
 
-  // @dev A mapping of all of the referree staker referred by me. Mapping as by pool id and then by my address then referree array
-  mapping(uint256 => mapping(address => address[])) public myReferrees;
+  // @dev A mapping of all of the referee staker referred by me. Mapping as by pool id and then by my address then referee array
+  mapping(uint256 => mapping(address => address[])) public myreferees;
 
   /// @dev A flag indicating if claim should be halted
   bool public pause;
@@ -177,19 +177,19 @@ contract StakingPools is ReentrancyGuard {
           nextReferral[pid]++;
       }
 
-      // add referree to referral's myReferree array
+      // add referee to referral's myreferee array
       bool toAdd = true;
       if (_pool.onReferralBonus && referral != address(0)) {
-          address referreeAddr = msg.sender;
-          address[] storage  referrees = myReferrees[pid][referral];
-          for (uint256 i = 0; i < referrees.length; i++) {
-              if (referrees[i] == referreeAddr) {
+          address refereeAddr = msg.sender;
+          address[] storage  referees = myreferees[pid][referral];
+          for (uint256 i = 0; i < referees.length; i++) {
+              if (referees[i] == refereeAddr) {
                   toAdd = false;
               }
           }
 
           if (toAdd) {
-              referrees.push(referreeAddr);
+              referees.push(refereeAddr);
           }
       }
       _;
@@ -484,14 +484,14 @@ contract StakingPools is ReentrancyGuard {
     return referralList[_poolId][_referralIndex];
   }
 
-  /// @dev Gets addressed of referree referred by a referral
+  /// @dev Gets addressed of referee referred by a referral
   ///
   /// @param _poolId The pool to get referral address
-  /// @param referral the address of referral to find all its referrees
+  /// @param referral the address of referral to find all its referees
   ///
-  /// @return the address array of referrees
-  function getPoolReferree(uint256 _poolId, address referral) external view returns(address[] memory) {
-    return myReferrees[_poolId][referral];
+  /// @return the address array of referees
+  function getPoolreferee(uint256 _poolId, address referral) external view returns(address[] memory) {
+    return myreferees[_poolId][referral];
   }
 
   /// @dev Updates all of the pools.
