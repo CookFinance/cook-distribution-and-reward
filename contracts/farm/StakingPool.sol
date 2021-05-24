@@ -455,7 +455,7 @@ contract StakingPools is ReentrancyGuard {
   }
 
 
-  function getPoolUser(uint256 _poolId, uint256 _userIndex) external view returns (address) {
+  function getPoolReferral(uint256 _poolId, uint256 _userIndex) external view returns (address) {
     return referralList[_userIndex][_poolId];
   }
 
