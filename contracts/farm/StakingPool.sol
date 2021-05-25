@@ -170,8 +170,10 @@ contract StakingPools is ReentrancyGuard {
 
   ///@dev modifier add referral to referrallist. Users are indexed in order to keep track of
   modifier checkIfNewReferral(uint256 pid, address referral) {
-      Pool.Data storage _pool = _pools.get(pid);
-      if (_pool.onReferralBonus && !referralIsKnown[referral][pid]) {
+    Pool.Data storage _pool = _pools.get(pid);
+
+    if (_pool.onReferralBonus && referral != address(0)) {
+      if (!referralIsKnown[referral][pid]) {
           referralList[pid][nextReferral[pid]] = referral;
           referralIsKnown[referral][pid] = true;
           nextReferral[pid]++;
@@ -179,20 +181,20 @@ contract StakingPools is ReentrancyGuard {
 
       // add referee to referral's myreferee array
       bool toAdd = true;
-      if (_pool.onReferralBonus && referral != address(0)) {
-          address refereeAddr = msg.sender;
-          address[] storage  referees = myreferees[pid][referral];
-          for (uint256 i = 0; i < referees.length; i++) {
-              if (referees[i] == refereeAddr) {
-                  toAdd = false;
-              }
-          }
-
-          if (toAdd) {
-              referees.push(refereeAddr);
-          }
+      address refereeAddr = msg.sender;
+      address[] storage  referees = myreferees[pid][referral];
+      for (uint256 i = 0; i < referees.length; i++) {
+        if (referees[i] == refereeAddr) {
+          toAdd = false;
+        }
       }
-      _;
+
+      if (toAdd) {
+        referees.push(refereeAddr);
+      }
+    } 
+
+    _;
   }
 
   /// @dev Sets the governance.

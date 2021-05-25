@@ -52,6 +52,7 @@ async function main() {
     const COOK_ADDRESS = "0xff75ced57419bcaebe5f05254983b013b0646ef5";
     const UNISWAP_ROUTER_ADDRESS = "0x7a250d5630b4cf539739df2c5dacb4c659f2488d";
     const UNISWAP_FACTORY_ADDRESS = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
+    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
     const uniswapRouterV2 = await ethers.getContractAt(UNIV2RouterABI, UNISWAP_ROUTER_ADDRESS);
     const uniswapFactory = await ethers.getContractAt(UNIFACTORYABI, UNISWAP_FACTORY_ADDRESS);
@@ -73,6 +74,16 @@ async function main() {
     await wETH.connect(cookLPDeployer).deposit(overrides);
     await wETH.connect(cookLPDeployer).approve(uniswapRouterV2.address, "10000000000000000000000000");
     await cook.connect(cookLPDeployer).approve(uniswapRouterV2.address, "10000000000000000000000000");
+    await uniswapRouterV2.connect(cookLPDeployer).addLiquidity(
+      cook.address,
+      WETH_ADDRESS,
+      "100000000000000000000",
+      "100000000000000000",
+      "1000",
+      "1000",
+      cookLPDeployer.address,
+      Date.now() * 2
+    );
 
     for (var i = 0; i < depositors.length; i++) {
       await cook.mint(depositors[i].address, "100000000000000000000000000");
@@ -116,15 +127,26 @@ async function main() {
     cook.connect(cookLPDeployer).transfer(stakingPools.address, "1000000000000000000000000"); 
 
     const rewardRate = "10000000000000000000";
-    const createdPoolId = await stakingPools.connect(cookLPDeployer).createPool(pairAddress, true, 300);
+    const createdPoolId = await stakingPools.connect(cookLPDeployer).createPool(pairAddress, true, 86400 * 90);
     await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
     await stakingPools.connect(cookLPDeployer).setRewardWeights([1]);
     await stakingPools.connect(cookLPDeployer).startReferralBonus(0);
     // console.log("======== pool created tx ========:", createdPoolId)
 
     const CookWETH = await ethers.getContractAt(ERC20ABI, pairAddress);
+    CookWETH.connect(cookLPDeployer).approve(stakingPools.address, "10000000000000000000000");
+    await stakingPools.connect(cookLPDeployer).deposit(0, "1000000000000000" , ZERO_ADDRESS);
 
+    // For testing vesrting reward
+    for (var i = 0; i < 5; i++) {
+        for (var j = 0; j < 50; j++) {
+            await hre().network.provider.send("evm_mine", [])
+        }
+        await stakingPools.connect(cookLPDeployer).claim(0);
+        await hre().network.provider.send("evm_increaseTime", [86400 * 2]); 
+    }
 
+    // For testing referral
     for (var i = 0; i < depositors.length; i++) {
       await CookWETH.connect(depositors[i]).approve(stakingPools.address, "10000000000000000000000");
       await stakingPools.connect(depositors[i]).deposit(0, "1000000000000000" , referrals[i].address);
