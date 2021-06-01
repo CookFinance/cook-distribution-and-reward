@@ -84,6 +84,10 @@ describe("RewardVesting", () => {
           .emit(rewardVesting, "GovernanceUpdated")
           .withArgs(await newGovernance.getAddress());
       });
+
+      it("Can't initialize twice", async() => {
+        expect(rewardVesting.connect(governance).initialize(reward.address)).revertedWith("Already initialized");        
+      })
     });
   });
 

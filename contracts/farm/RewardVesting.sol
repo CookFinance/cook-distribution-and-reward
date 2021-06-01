@@ -31,7 +31,7 @@ contract RewardVesting {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    IERC20 public cookReward;
+    IERC20 public reward;
 
     // Variable for earning with locks
     struct LockedBalance {
@@ -75,9 +75,9 @@ contract RewardVesting {
     /*
      * Owner methods
      */
-    function initialize(IERC20 _cookReward) external onlyGovernance {
-
-        cookReward = _cookReward;
+    function initialize(IERC20 _reward) external onlyGovernance {
+        require(reward == IERC20(0), "Already initialized");
+        reward = _reward;
     }
 
     modifier onlyGovernance() {
@@ -108,7 +108,7 @@ contract RewardVesting {
 
 
     function transferPenalty(address transferTo) external onlyGovernance {
-        cookReward.safeTransfer(transferTo, accumulatedPenalty);
+        reward.safeTransfer(transferTo, accumulatedPenalty);
         accumulatedPenalty = 0;
     }
 
@@ -118,7 +118,7 @@ contract RewardVesting {
      */
     function addEarning(address user, uint256 amount, uint256 durationInSecs) external {
         _addPendingEarning(user, amount, durationInSecs);
-        cookReward.safeTransferFrom(msg.sender, address(this), amount);
+        reward.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function _addPendingEarning(address user, uint256 amount, uint256 durationInSecs) internal {
@@ -172,7 +172,7 @@ contract RewardVesting {
         }
 
 
-        cookReward.safeTransfer(msg.sender, amount);
+        reward.safeTransfer(msg.sender, amount);
 
         accumulatedPenalty = accumulatedPenalty + penaltyAmount;
 
