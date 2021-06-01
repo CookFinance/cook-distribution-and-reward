@@ -42,7 +42,7 @@ describe("RewardVesting", () => {
 
     rewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
 
-    await rewardVesting.connect(governance).initialize(reward.address);
+    await rewardVesting.connect(governance).initialize(reward.address, await mockPool.getAddress());
 
     await reward.connect(deployer).mint(await mockPool.getAddress(),'100000');
 
@@ -86,7 +86,11 @@ describe("RewardVesting", () => {
       });
 
       it("Can't initialize twice", async() => {
-        expect(rewardVesting.connect(governance).initialize(reward.address)).revertedWith("Already initialized");        
+        expect(rewardVesting.connect(governance).initialize(reward.address, await mockPool.getAddress())).revertedWith("Already initialized");        
+      })
+
+      it("Only reward source can invoke addEarning", async() => {
+        expect(rewardVesting.connect(player).addEarning(await player.getAddress(), 50000, 86700 * 5)).revertedWith("Not from reward source");                
       })
     });
   });

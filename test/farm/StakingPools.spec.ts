@@ -45,7 +45,6 @@ describe("StakingPools", () => {
     )) as MockCOOK;
 
     rewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-    await rewardVesting.connect(governance).initialize(reward.address);
 
     pools = (await StakingPoolsFactory.connect(deployer).deploy(
       reward.address,
@@ -54,6 +53,7 @@ describe("StakingPools", () => {
       rewardVesting.address
     )) as StakingPools;
 
+     await rewardVesting.connect(governance).initialize(reward.address, pools.address);
      reward.connect(deployer).transfer(pools.address, "1000000000000000000000000"); 
   });
 
@@ -192,7 +192,7 @@ describe("StakingPools", () => {
   describe("set reward vesting", () => {
     it("only allows governance or sentinel to call", async () => {
       let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-      await newRewardVesting.connect(governance).initialize(reward.address);
+      await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
 
       expect(pools.setRewardVesting(newRewardVesting.address)).revertedWith(
         "StakingPools: not paused, or not governance or sentinel"
@@ -205,7 +205,7 @@ describe("StakingPools", () => {
 
       it("only allows in the pause mode", async () => {
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address);
+        await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
   
         expect(pools.setRewardVesting(newRewardVesting.address)).revertedWith(
           "StakingPools: not paused, or not governance or sentinel"
@@ -216,7 +216,7 @@ describe("StakingPools", () => {
       it("set reward vesting to new contract", async () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address);
+        await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
 
         await pools.setRewardVesting(newRewardVesting.address);
         expect(await pools.rewardVesting()).equal(newRewardVesting.address);
@@ -225,7 +225,7 @@ describe("StakingPools", () => {
       it("emits RewardVestingUpdated event", async () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address);
+        await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
 
         expect(pools.setRewardVesting(newRewardVesting.address))
           .emit(pools, "RewardVestingUpdated")
@@ -238,7 +238,7 @@ describe("StakingPools", () => {
 
       it("only allows in the pause mode", async () => {
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address);
+        await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
   
         expect(pools.setRewardVesting(newRewardVesting.address)).revertedWith(
           "StakingPools: not paused, or not governance or sentinel"
@@ -249,7 +249,7 @@ describe("StakingPools", () => {
       it("set reward vesting to new contract", async () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address);
+        await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
 
         await pools.setRewardVesting(newRewardVesting.address);
         expect(await pools.rewardVesting()).equal(newRewardVesting.address);
@@ -258,7 +258,7 @@ describe("StakingPools", () => {
       it("emits RewardVestingUpdated event", async () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
-        await newRewardVesting.connect(governance).initialize(reward.address);
+        await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
 
         expect(pools.setRewardVesting(newRewardVesting.address))
           .emit(pools, "RewardVestingUpdated")
@@ -632,9 +632,7 @@ describe("StakingPools", () => {
           var newRewardVesting = (await RewardVestingFactory.connect(
             deployer
           ).deploy(await governance.getAddress())) as RewardVesting;
-          await newRewardVesting
-            .connect(governance)
-            .initialize(reward.address);
+          await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
           await pools.setRewardVesting(newRewardVesting.address);
           await pools.connect(governance).setPause(false);
 

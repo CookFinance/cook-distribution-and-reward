@@ -54,6 +54,9 @@ contract RewardVesting {
 
     address public pendingGovernance;
 
+    /// @dev The address of the reward source, the address can invoke addEarning 
+    address public rewardSource;
+
     event EarningAdd(address indexed user, uint256 amount);
     event EarningWithdraw(address indexed user, uint256 amount, uint256 penaltyAmount);
 
@@ -75,9 +78,11 @@ contract RewardVesting {
     /*
      * Owner methods
      */
-    function initialize(IERC20 _reward) external onlyGovernance {
+    function initialize(IERC20 _reward, address _rewardSource) external onlyGovernance {
         require(reward == IERC20(0), "Already initialized");
+        require(_rewardSource != address(0), "Zero address");
         reward = _reward;
+        rewardSource = _rewardSource;
     }
 
     modifier onlyGovernance() {
@@ -117,6 +122,7 @@ contract RewardVesting {
      * Early exit is allowed, by 50% will be penalty.
      */
     function addEarning(address user, uint256 amount, uint256 durationInSecs) external {
+        require(msg.sender == rewardSource, "Not from reward source");
         _addPendingEarning(user, amount, durationInSecs);
         reward.safeTransferFrom(msg.sender, address(this), amount);
     }
