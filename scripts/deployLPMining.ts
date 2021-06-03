@@ -111,8 +111,6 @@ async function main() {
      * Deploy reward vesting
      */
     const rewardVesting = (await RewardVestingFactory.connect(cookLPDeployer).deploy(cookLPDeployer.address)) as RewardVesting;
-    await rewardVesting.connect(cookLPDeployer).initialize(cook.address);
-
     console.log("======= Reward Vesting deployed ======= : ", rewardVesting.address);
 
     const stakingPools = (await StakingPoolsFactory.connect(cookLPDeployer).deploy(
@@ -125,6 +123,7 @@ async function main() {
     console.log("======= Staking program  deployed ======= : ", stakingPools.address);
 
     cook.connect(cookLPDeployer).transfer(stakingPools.address, "1000000000000000000000000"); 
+    await rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
 
     const rewardRate = "10000000000000000000";
     const createdPoolId = await stakingPools.connect(cookLPDeployer).createPool(pairAddress, true, 86400 * 90);
