@@ -1008,7 +1008,8 @@ describe("StakingPools", () => {
 
       it("referee can not use different referral during competition", async () => {
         await pools.connect(governance).startReferralBonus(0);
-        await pools.deposit(0, depositAmount, await referral1.getAddress());
+        expect(pools.deposit(0, depositAmount, await referral1.getAddress())).emit(pools, "NewReferralAdded")
+          .withArgs(await referral1.getAddress(), await depositor1.getAddress());
         await mineBlocks(ethers.provider, elapsedBlocks);
 
         expect(pools.deposit(0, depositAmount, await referral2.getAddress())).revertedWith("referred already");

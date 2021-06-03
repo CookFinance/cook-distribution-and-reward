@@ -99,6 +99,10 @@ contract StakingPools is ReentrancyGuard {
     IRewardVesting rewardVesting
   );
 
+  event NewReferralAdded(
+    address referral, address referee
+  );
+
   /// @dev The token which will be minted as a reward for staking.
   IERC20 public reward;
 
@@ -177,6 +181,8 @@ contract StakingPools is ReentrancyGuard {
           referralList[pid][nextReferral[pid]] = referral;
           referralIsKnown[referral][pid] = true;
           nextReferral[pid]++;
+
+          emit NewReferralAdded(referral, msg.sender);
       }
 
       // add referee to referral's myreferee array
