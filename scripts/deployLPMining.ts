@@ -17,7 +17,7 @@ export function hre() {
 }
 
 async function main() {
-    console.log("-------------- Deployment Start --------------");
+    console.log("=========== LP Mining Deployment Start ===========")
     // await run("compile");
 
     const [
@@ -60,6 +60,7 @@ async function main() {
 
     const MockCOOKFactory = await ethers.getContractFactory("MockCOOK");
     const cook = (await MockCOOKFactory.connect(cookLPDeployer).deploy("100000000000000000000000000")) as MockCOOK;
+    console.log("============== cook address ==============:", cook.address)
 
     await uniswapFactory.connect(cookLPDeployer).createPair(cook.address, WETH_ADDRESS);
     const pairAddress = await uniswapFactory.connect(cookLPDeployer).getPair(cook.address, WETH_ADDRESS);
@@ -162,6 +163,16 @@ async function main() {
       const referralPower = await stakingPools.getAccumulatedReferralPower(referrals[i].address, 0)
       console.log("====== referral power: =======", referralPower.toBigInt().toString());
     }
+
+    console.log("\n==================== Start of Cook Staking deployment ======================")
+    const CookPoolFactory = await ethers.getContractFactory("CookPool", cookLPDeployer);
+    const cookPool1 = await CookPoolFactory.deploy(cook.address, "10000000000000000000", 0, 0)
+    await cookPool1.deployed()
+    console.log("============== cook pool addres1: ===================", cookPool1.address)
+
+    const cookPool2 = await CookPoolFactory.deploy(cook.address, "20000000000000000000", 0, 0)
+    await cookPool1.deployed();
+    console.log("============== cook pool addres2: ===================", cookPool2.address)
 
 }
 
