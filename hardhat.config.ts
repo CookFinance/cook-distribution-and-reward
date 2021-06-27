@@ -18,16 +18,16 @@ task("accounts", "Prints the list of accounts", async (args, hre) => {
 
 module.exports = {
   networks: {
-    eth: {
-      url: "https://mainnet.infura.io/v3/" + process.env.INFURA_TOKEN,
-      // @ts-ignore
-      accounts: [`0x${process.env.PRODUCTION_MAINNET_DEPLOY_PRIVATE_KEY}`],
-    },
-    bsc: {
-      url: "https://bsc-dataseed.binance.org/",
-      // @ts-ignore
-      accounts: [`0x${process.env.PRODUCTION_MAINNET_DEPLOY_PRIVATE_KEY}`],
-    },
+    // eth: {
+    //   url: "https://mainnet.infura.io/v3/" + process.env.INFURA_TOKEN,
+    //   // @ts-ignore
+    //   accounts: [`0x${process.env.PRODUCTION_MAINNET_DEPLOY_PRIVATE_KEY}`],
+    // },
+    // bsc: {
+    //   url: "https://bsc-dataseed.binance.org/",
+    //   // @ts-ignore
+    //   accounts: [`0x${process.env.PRODUCTION_MAINNET_DEPLOY_PRIVATE_KEY}`],
+    // },
   },
   solidity: {
     version: "0.6.10",

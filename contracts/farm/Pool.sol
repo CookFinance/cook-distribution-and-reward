@@ -25,6 +25,7 @@ import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import {FixedPointMath} from "../lib/FixedPointMath.sol";
 import {IDetailedERC20} from "../interfaces/IDetailedERC20.sol";
+import {IRewardVesting} from "../interfaces/IRewardVesting.sol";
 
 /// @title Pool
 ///
@@ -53,6 +54,7 @@ library Pool {
     bool onReferralBonus;
     uint256 totalReferralAmount; // deposited through referral
     FixedPointMath.uq192x64 accumulatedReferralWeight;
+    uint256 lockUpPeriodInSecs;
   }
 
   struct List {
