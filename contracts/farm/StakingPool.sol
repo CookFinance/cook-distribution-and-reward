@@ -31,7 +31,6 @@ import {IRewardVesting} from "../interfaces/IRewardVesting.sol";
 import {Pool} from "./Pool.sol";
 import {Stake, Deposit} from "./Stake.sol";
 import {ReferralPower} from "./ReferralPower.sol";
-
 // import "hardhat/console.sol";
 
 /// @dev A contract which allows users to stake to farm tokens.
