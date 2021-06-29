@@ -49,6 +49,7 @@ library Pool {
     // for vesting
     uint256 lastUpdatedBlock;
     bool needVesting;
+    IRewardVesting rewardVesting;
     // for referral power calculation
     uint256 vestingDurationInSecs;
     bool onReferralBonus;
