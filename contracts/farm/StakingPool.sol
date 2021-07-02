@@ -566,7 +566,12 @@ contract StakingPools is ReentrancyGuard {
     return _pool.lockUpPeriodInSecs;
   }
 
-    function getPoolSlashPercentage(uint256 _poolId) external view returns(uint256) {
+  function getPoolVestingDurationInSecs(uint256 _poolId) external view returns(uint256) {
+    Pool.Data storage _pool = _pools.get(_poolId); 
+    return _pool.lockUpPeriodInSecs;
+  }
+
+  function getPoolSlashPercentage(uint256 _poolId) external view returns(uint256) {
     Pool.Data storage _pool = _pools.get(_poolId); 
     return _pool.insurancePercentage;
   }

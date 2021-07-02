@@ -90,14 +90,14 @@ async function main() {
     const cookPoolRewardAddress = await stakingPools.connect(cookLPDeployer).getPoolRewardVesting(0);
     const cookPoolLockupPeriod = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(0);
     const cookPoolSlashPercentage = await stakingPools.connect(cookLPDeployer).getPoolSlashPercentage(0);
+    const cookPoolVestingDuration = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(0)
     console.log("================ pool 0 reward address ================:", cookPoolRewardAddress)
     console.log("================ pool 0 lockup period  ================:", cookPoolLockupPeriod.toNumber())
+    console.log("================ pool 0 vesting period  ================:", cookPoolVestingDuration.toNumber())
     console.log("================ pool 0 slash percentage  ================:", cookPoolSlashPercentage.toNumber())
 
     await cook.connect(cookLPDeployer).approve(stakingPools.address, "100000000000000000000"); 
-    console.log(0);
     await stakingPools.connect(cookLPDeployer).deposit(0, "1000000000000000" , ZERO_ADDRESS);
-    console.log(0);
 
     // For testing vesrting reward
     for (var i = 0; i < 5; i++) {
@@ -106,7 +106,6 @@ async function main() {
         }
         await stakingPools.connect(cookLPDeployer).claim(0);
         await hre().network.provider.send("evm_increaseTime", [86400 * 30]); 
-        console.log(0);
     }
 
     // For testing referral
