@@ -190,7 +190,7 @@ describe("StakingPools", () => {
     it("only allows governance or sentinel to call", async () => {
       let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
       await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
-      await pools.connect(governance).createPool(reward.address, true, rewardVesting.address, 300, 300)
+      await pools.connect(governance).createPool(reward.address, true, rewardVesting.address, 300, 300, 0)
 
       expect(pools.setRewardVesting(0, newRewardVesting.address)).revertedWith(
         "StakingPools: not paused, or not governance or sentinel"
@@ -204,7 +204,7 @@ describe("StakingPools", () => {
       it("only allows in the pause mode", async () => {
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
         await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
-        await pools.connect(governance).createPool(reward.address, true, rewardVesting.address, 300, 300)
+        await pools.connect(governance).createPool(reward.address, true, rewardVesting.address, 300, 300, 0)
         expect(pools.setRewardVesting(0, newRewardVesting.address)).revertedWith(
           "StakingPools: not paused, or not governance or sentinel"
         );
@@ -215,7 +215,7 @@ describe("StakingPools", () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
         await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
-        await pools.connect(governance).createPool(reward.address, true, newRewardVesting.address, 300, 300)
+        await pools.connect(governance).createPool(reward.address, true, newRewardVesting.address, 300, 300, 0)
 
         await pools.setRewardVesting(0, newRewardVesting.address);
         expect(await pools.getPoolRewardVesting(0)).equal(newRewardVesting.address);
@@ -225,7 +225,7 @@ describe("StakingPools", () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
         await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
-        await pools.connect(governance).createPool(reward.address, true, newRewardVesting.address, 300, 300)
+        await pools.connect(governance).createPool(reward.address, true, newRewardVesting.address, 300, 300, 0)
 
         expect(pools.setRewardVesting(0, newRewardVesting.address))
           .emit(pools, "RewardVestingUpdated")
@@ -239,7 +239,7 @@ describe("StakingPools", () => {
       it("only allows in the pause mode", async () => {
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
         await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
-        await pools.connect(governance).createPool(reward.address, true, rewardVesting.address, 300, 300)
+        await pools.connect(governance).createPool(reward.address, true, rewardVesting.address, 300, 300, 0)
   
         expect(pools.setRewardVesting(0, newRewardVesting.address)).revertedWith(
           "StakingPools: not paused, or not governance or sentinel"
@@ -251,7 +251,7 @@ describe("StakingPools", () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
         await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
-        await pools.connect(governance).createPool(reward.address, true, newRewardVesting.address, 300, 300)
+        await pools.connect(governance).createPool(reward.address, true, newRewardVesting.address, 300, 300, 0)
 
         await pools.setRewardVesting(0, newRewardVesting.address);
         expect(await pools.getPoolRewardVesting(0)).equal(newRewardVesting.address);
@@ -261,7 +261,7 @@ describe("StakingPools", () => {
         await pools.connect(governance).setPause(true);
         let newRewardVesting = (await RewardVestingFactory.connect(deployer).deploy(await governance.getAddress())) as RewardVesting;
         await newRewardVesting.connect(governance).initialize(reward.address, pools.address);
-        await pools.connect(governance).createPool(reward.address, true, newRewardVesting.address, 300, 300)
+        await pools.connect(governance).createPool(reward.address, true, newRewardVesting.address, 300, 300, 0)
 
         expect(pools.setRewardVesting(0, newRewardVesting.address))
           .emit(pools, "RewardVestingUpdated")
@@ -280,7 +280,7 @@ describe("StakingPools", () => {
     });
 
     it("only allows governance to call", async () => {
-      expect(pools.createPool(token.address,true, rewardVesting.address, 300, 0)).revertedWith(
+      expect(pools.createPool(token.address,true, rewardVesting.address, 300, 0, 0)).revertedWith(
         "StakingPools: only governance"
       );
     });
@@ -289,15 +289,15 @@ describe("StakingPools", () => {
       beforeEach(async () => (pools = pools.connect(governance)));
 
       it("emits PoolCreated event", async () => {
-        expect(pools.createPool(token.address,true, rewardVesting.address, 300, 0))
+        expect(pools.createPool(token.address,true, rewardVesting.address, 300, 0, 0))
           .emit(pools, "PoolCreated")
           .withArgs(0, token.address, rewardVesting.address, 300, 0);
       });
 
       context("when reusing token", async () => {
         it("reverts", async () => {
-          await pools.createPool(token.address,true, rewardVesting.address,300, 0);
-          expect(pools.createPool(token.address,true, rewardVesting.address,300, 0)).revertedWith("StakingPools: token already has a pool");
+          await pools.createPool(token.address,true, rewardVesting.address,300, 0, 0);
+          expect(pools.createPool(token.address,true, rewardVesting.address,300, 0, 0)).revertedWith("StakingPools: token already has a pool");
         });
       });
     });
@@ -351,7 +351,7 @@ describe("StakingPools", () => {
         });
 
         beforeEach(async () => {
-          await pools.connect(governance).createPool(token.address,true,rewardVesting.address ,300, 0);
+          await pools.connect(governance).createPool(token.address,true,rewardVesting.address ,300, 0, 0);
         });
 
         shouldBehaveLikeSetRewardWeights([10000]);
@@ -376,7 +376,7 @@ describe("StakingPools", () => {
           for (let n = 0; n < numberPools; n++) {
             await pools
               .connect(governance)
-              .createPool(tokens[n].address,true, rewardVesting.address, 300, 0);
+              .createPool(tokens[n].address,true, rewardVesting.address, 300, 0, 0);
           }
         });
 
@@ -400,7 +400,7 @@ describe("StakingPools", () => {
       token = (await MockCOOKFactory.connect(deployer).deploy(
         "1000000000000000000"
       )) as MockCOOK;
-      await pools.connect(governance).createPool(token.address,true,rewardVesting.address,300, 0);
+      await pools.connect(governance).createPool(token.address,true,rewardVesting.address,300, 0, 0);
       await pools.connect(governance).setRewardWeights([1]);
     });
 
@@ -485,7 +485,7 @@ describe("StakingPools", () => {
         "1000000000000000000"
       )) as MockCOOK;
 
-      await pools.connect(governance).createPool(token.address,true,rewardVesting.address,300, 0);
+      await pools.connect(governance).createPool(token.address,true,rewardVesting.address,300, 0, 0);
       await pools.connect(governance).setRewardWeights([1]);
     });
 
@@ -583,7 +583,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true,rewardVesting.address,300,0);
+      await pools.createPool(token.address,true,rewardVesting.address,300,0 , 0);
       await pools.setRewardWeights([rewardWeight]);
     });
 
@@ -712,7 +712,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true,rewardVesting.address,300,0);
+      await pools.createPool(token.address,true,rewardVesting.address, 300, 0, 0);
       await pools.setRewardWeights([rewardWeight]);
     });
 
@@ -820,7 +820,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,false,ZERO_ADDRESS,0,0);
+      await pools.createPool(token.address,false,ZERO_ADDRESS, 0, 0, 0);
       await pools.setRewardWeights([rewardWeight]);
     });
 
@@ -905,7 +905,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true,rewardVesting.address,300,0);
+      await pools.createPool(token.address,true,rewardVesting.address, 300, 0, 0);
       await pools.setRewardWeights([rewardWeight]);
       await pools.setRewardRate(rewardRate);
     });
@@ -988,7 +988,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true,rewardVesting.address,300,0);
+      await pools.createPool(token.address,true,rewardVesting.address, 300, 0, 0);
       await pools.setRewardWeights([rewardWeight]);
       await pools.setRewardRate(rewardRate);
     });
@@ -1281,7 +1281,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address , true,rewardVesting.address , day * 30, day * 90);
+      await pools.createPool(token.address , true,rewardVesting.address , day * 30, day * 90, 0);
       await pools.setRewardWeights([rewardWeight]);
       await pools.setRewardRate(rewardRate);
     });    
@@ -1431,8 +1431,197 @@ describe("StakingPools", () => {
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 2)
         expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount  * 0)
       })
+    })
+  })
+
+  describe("Accrue insurrance fee", () => {
+    let depositor1: Signer;
+    let depositor2: Signer;
+    let depositor3: Signer;
+    let depositor4: Signer;
+
+    let token: MockCOOK;
+
+    let rewardWeight = 1;
+    let depositAmount = 50000;
+    let rewardRate = 5000;
+    let day = 86400
+
+    beforeEach(async() => {
+      token = (await MockCOOKFactory.connect(deployer).deploy(
+        "1000000000000000000"
+      )) as MockCOOK;
+
+      await pools.connect(governance).createPool(token.address,true,rewardVesting.address,300, 0, 0);
+      await pools.connect(governance).setRewardWeights([1]);  
+    })
+
+    beforeEach(async () => {
+      [depositor1, depositor2, depositor3, depositor4,  ...signers] = signers;
+
+      await token.connect(depositor1).mint(await depositor1.getAddress(), 10000000000000);
+      await token.connect(depositor2).mint(await depositor2.getAddress(), 10000000000000);
+      await token.connect(depositor3).mint(await depositor2.getAddress(), 10000000000000);
+      await token.connect(depositor4).mint(await depositor2.getAddress(), 10000000000000);
+
+      await token.connect(depositor1).approve(pools.address, MAXIMUM_U256);
+      await token.connect(depositor2).approve(pools.address, MAXIMUM_U256);
+      await token.connect(depositor3).approve(pools.address, MAXIMUM_U256);
+      await token.connect(depositor4).approve(pools.address, MAXIMUM_U256);
+    });
+
+    // create pool with insurrance.
+    // setup pool insurance percentage.
+    // accrue fee should only invokable by governance.
+    context("Insurrance related functionality should only be invokable by governance", () => {
+      it("Insurrance percentage should be between 0, 50", async() => {
+        expect(pools.connect(governance).createPool(ZERO_ADDRESS,true,rewardVesting.address,300, 0, 80)).revertedWith("invalid insurance percentage");
+      });
+
+      it("Insurrance percentage should only be updated by governance", async() => {
+        expect(pools.connect(deployer).setInsurancePercentage(0, 30)).revertedWith("StakingPools: only governance");
+        expect(pools.connect(sentinel).setInsurancePercentage(0, 30)).revertedWith("StakingPools: only governance");
+      });
+
+      it("set Insurrance percentage should be between 0, 50", async() => {
+        expect(pools.connect(governance).setInsurancePercentage(0, 60)).revertedWith("invalid insurance percentage");
+      });
+
+      it("Accrue insurrance fee should be invoked only by governance", async() => {
+        expect(pools.connect(deployer).accrueInsurance(0)).revertedWith("StakingPools: only governance");
+        expect(pools.connect(sentinel).accrueInsurance(0)).revertedWith("StakingPools: only governance");
+      })
+
+      it("Accrue insurrance will fail if percentage is zero", async() => {
+        expect(pools.connect(governance).accrueInsurance(0)).revertedWith("insurancePercentage should not be 0"); 
+      })
+    })
+
+    context("Accrue Insurrance", async() => {
+      beforeEach(async() => {
+        pools.connect(governance).setInsurancePercentage(0, 20)
+      })
+
+      it("single deposit, accrue insurnace once", async() => {
+        pools.connect(depositor1).deposit(0, depositAmount * 10, ZERO_ADDRESS);
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 10)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(depositAmount * 10)
+
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 8)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(depositAmount * 8)
+      })
+
+      it("single deposit, multiple accrue insurnace", async() => {
+        const deposit = depositAmount * 10;
+        const restDeposit = deposit * 0.8;
+        const accumulatedInsurrance = deposit * 0.2;
+        pools.connect(depositor1).deposit(0, deposit, ZERO_ADDRESS);
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(deposit)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(deposit)
+
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(restDeposit)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(restDeposit)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(accumulatedInsurrance)
+
+        const nextRestDeposit = restDeposit * 0.8;
+        const nextAccumulatedInsurrance = accumulatedInsurrance + restDeposit * 0.2
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(nextRestDeposit)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(nextRestDeposit)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(nextAccumulatedInsurrance)
+
+        const nextNextRestDeposit = nextRestDeposit * 0.8;
+        const nextNextAccumulatedInsurrance = nextAccumulatedInsurrance + nextRestDeposit * 0.2
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(nextNextRestDeposit)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(nextNextRestDeposit)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(nextNextAccumulatedInsurrance)
+      })
+
+      it("one depositor, single deposit, multiple accrue insurnace", async() => {
+        const deposit = depositAmount * 10;
+        const restDeposit = deposit * 0.8;
+        const accumulatedInsurrance = deposit * 0.2;
+        pools.connect(depositor1).deposit(0, deposit, ZERO_ADDRESS);
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(deposit)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(deposit)
+
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(restDeposit)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(restDeposit)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(accumulatedInsurrance)
+
+        const nextRestDeposit = restDeposit * 0.8;
+        const nextAccumulatedInsurrance = accumulatedInsurrance + restDeposit * 0.2
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(nextRestDeposit)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(nextRestDeposit)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(nextAccumulatedInsurrance)
+
+        const nextNextRestDeposit = nextRestDeposit * 0.8;
+        const nextNextAccumulatedInsurrance = nextAccumulatedInsurrance + nextRestDeposit * 0.2
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(nextNextRestDeposit)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(nextNextRestDeposit)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(nextNextAccumulatedInsurrance)
+      })      
+
+      it("one depositor, multiple deposits, multiple accrue insurnace", async() => {
+        pools.connect(depositor1).deposit(0, depositAmount * 10, ZERO_ADDRESS);
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 10)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(depositAmount * 10)
+
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 8)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(depositAmount * 8)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(depositAmount * 2)
+
+        pools.connect(depositor1).deposit(0, depositAmount * 12, ZERO_ADDRESS);
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 20)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(depositAmount * 20)
+
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 16)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(depositAmount * 16)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(depositAmount * 6)
+
+        pools.connect(depositor1).deposit(0, depositAmount * 4, ZERO_ADDRESS);
+        pools.connect(depositor1).deposit(0, depositAmount * 5, ZERO_ADDRESS);
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 25)
+
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 20)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(depositAmount * 20)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(depositAmount * 11)
+      })      
+
+      it("one depositor, multiple deposits and withdraws, multiple accrue insurnace", async() => {
+        pools.connect(depositor1).deposit(0, depositAmount * 10, ZERO_ADDRESS);
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 10)
+
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 8)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(depositAmount * 8)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(depositAmount * 2)
+
+        pools.connect(depositor1).withdraw(0, depositAmount * 3);
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 5)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(depositAmount * 5)
+
+        await pools.connect(governance).accrueInsurance(0)
+        expect(await pools.connect(depositor1).getPoolTotalDeposited(0)).equal(depositAmount * 4)
+        expect(await pools.connect(depositor1).getStakeTotalDeposited(await depositor1.getAddress(), 0)).equal(depositAmount * 4)
+        expect(await token.connect(governance).balanceOf(await governance.getAddress())).equal(depositAmount * 3)
+      })
+
+      it("Multiple depositors, multipe deposits and withdraws, multiple accrue insurance", async() => {
+        
+      })
+
 
     })
-    
+
   })
 })
