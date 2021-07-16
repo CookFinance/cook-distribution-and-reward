@@ -120,8 +120,8 @@ async function main() {
     for (var i = 0; i < depositors.length; i++) {
       await cook.mint(depositors[i].address, "100000000000000000000000000");
       await cook.connect(depositors[i]).approve(stakingPools.address, "100000000000000000000000000");
-      await stakingPools.connect(depositors[i]).deposit(0, "10000000000000000000" , referrals[i].address);
-      console.log(depositors[i].address)
+      const amount = ethers.utils.parseEther(i.toString())
+      await stakingPools.connect(depositors[i]).deposit(0, amount , referrals[i].address);
 
       for (var j = 0; j < 50; j++) {
         await hre().network.provider.send("evm_mine", []);
@@ -133,15 +133,11 @@ async function main() {
 
     for (var i = 0; i < referrals.length; i++) {  
       const myReferee = await stakingPools.connect(referrals[i]).getPoolreferee(0, referrals[i].address)
-      console.log(myReferee)
       var totalRefereeStakeAmount = 0
 
       for (var j = 0; j < myReferee.length; j++) {
-        console.log(myReferee[j])
         const stake = await stakingPools.connect(referrals[i]).getStakeTotalDeposited(myReferee[j], 0)
-        console.log(stake)
         const refereeStake = toTokenUnitsBN(stake, 18)
-        console.log("referee stake: ", refereeStake)
         totalRefereeStakeAmount = totalRefereeStakeAmount + refereeStake
       }
       console.log("====== referral power: =======", totalRefereeStakeAmount.toString());
