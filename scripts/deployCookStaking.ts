@@ -1,9 +1,9 @@
 import { ethers } from "hardhat";
 import { ContractTransaction } from "ethers";
-import BigNumber from "bignumber.js";
 import { MockCOOK } from "../typechain/MockCOOK";
 import { RewardVesting } from "../typechain/RewardVesting";
 import { StakingPools } from "../typechain/StakingPools";
+import { BigNumber } from "@ethersproject/bignumber";
 
 
 const ERC20ABI = [ { constant: true, inputs: [], name: "name", outputs: [{ name: "", type: "string" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { name: "_spender", type: "address" }, { name: "_value", type: "uint256" }, ], name: "approve", outputs: [{ name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "totalSupply", outputs: [{ name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { name: "_from", type: "address" }, { name: "_to", type: "address" }, { name: "_value", type: "uint256" }, ], name: "transferFrom", outputs: [{ name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "decimals", outputs: [{ name: "", type: "uint8" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [{ name: "_owner", type: "address" }], name: "balanceOf", outputs: [{ name: "balance", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "symbol", outputs: [{ name: "", type: "string" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { name: "_to", type: "address" }, { name: "_value", type: "uint256" }, ], name: "transfer", outputs: [{ name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [ { name: "_owner", type: "address" }, { name: "_spender", type: "address" }, ], name: "allowance", outputs: [{ name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { payable: true, stateMutability: "payable", type: "fallback" }, { anonymous: false, inputs: [ { indexed: true, name: "owner", type: "address" }, { indexed: true, name: "spender", type: "address" }, { indexed: false, name: "value", type: "uint256" }, ], name: "Approval", type: "event", }, { anonymous: false, inputs: [ { indexed: true, name: "from", type: "address" }, { indexed: true, name: "to", type: "address" }, { indexed: false, name: "value", type: "uint256" }, ], name: "Transfer", type: "event", }, ];
@@ -46,6 +46,8 @@ async function main() {
     for (var i = 0; i < referrals.length; i++) {
       console.log(referrals[i].address);
     }
+
+    
     // required contracts' addresses
     // TODO: currently set for Rinkeby testnet. should be changed for different chain
     const WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
@@ -56,6 +58,12 @@ async function main() {
 
     const MockCOOKFactory = await ethers.getContractFactory("MockCOOK");
     const cook = (await MockCOOKFactory.connect(cookLPDeployer).deploy("100000000000000000000000000")) as MockCOOK;
+
+    const toTokenUnitsBN = (tokenAmount: BigNumber, tokenDecimals: number) => {
+      const amt = BigNumber.from(tokenAmount);
+      const digits = BigNumber.from(10).pow(BigNumber.from(tokenDecimals));
+      return amt.div(digits).toNumber();
+    }    
 
     console.log("============== cook address ==============:", cook.address)
 
@@ -112,7 +120,8 @@ async function main() {
     for (var i = 0; i < depositors.length; i++) {
       await cook.mint(depositors[i].address, "100000000000000000000000000");
       await cook.connect(depositors[i]).approve(stakingPools.address, "100000000000000000000000000");
-      await stakingPools.connect(depositors[i]).deposit(0, "1000000000000000" , referrals[i].address);
+      await stakingPools.connect(depositors[i]).deposit(0, "10000000000000000000" , referrals[i].address);
+      console.log(depositors[i].address)
 
       for (var j = 0; j < 50; j++) {
         await hre().network.provider.send("evm_mine", []);
@@ -122,9 +131,20 @@ async function main() {
     const numOfReferrals = stakingPools.connect(cookLPDeployer).nextReferral(0);
     console.log("====== pool 0 referrals: ======", (await numOfReferrals).toNumber())
 
-    for (var i = 0; i < referrals.length; i++) {
-      const referralPower = await stakingPools.getAccumulatedReferralPower(referrals[i].address, 0)
-      console.log("====== referral power: =======", referralPower.toBigInt().toString());
+    for (var i = 0; i < referrals.length; i++) {  
+      const myReferee = await stakingPools.connect(referrals[i]).getPoolreferee(0, referrals[i].address)
+      console.log(myReferee)
+      var totalRefereeStakeAmount = 0
+
+      for (var j = 0; j < myReferee.length; j++) {
+        console.log(myReferee[j])
+        const stake = await stakingPools.connect(referrals[i]).getStakeTotalDeposited(myReferee[j], 0)
+        console.log(stake)
+        const refereeStake = toTokenUnitsBN(stake, 18)
+        console.log("referee stake: ", refereeStake)
+        totalRefereeStakeAmount = totalRefereeStakeAmount + refereeStake
+      }
+      console.log("====== referral power: =======", totalRefereeStakeAmount.toString());
     }
 }
 
