@@ -151,7 +151,7 @@ contract StakingPools is ReentrancyGuard {
   /// @dev A mapping of all of the referral power mapped first by pool and then by address.
   mapping(address => mapping(uint256 => ReferralPower.Data)) private _referralPowers;
 
-/// @dev A mapping of all of the referee staker power mapped first by pool and then by referral address.
+/// @dev A mapping of all of the referee staker power mapped first by referee and then by pool id to get referral address.
   mapping(address => mapping(uint256 => address)) public myReferral;
 
   /// @dev A mapping of known referrals mapped first by pool and then by address.
