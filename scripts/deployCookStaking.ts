@@ -75,8 +75,10 @@ async function main() {
     /**
      * Deploy reward vesting
      */
-    const rewardVesting = (await RewardVestingFactory.connect(cookLPDeployer).deploy(cookLPDeployer.address)) as RewardVesting;
-    // console.log("======= Reward Vesting deployed ======= : ", rewardVesting.address);
+    const pool0rewardVesting = (await RewardVestingFactory.connect(cookLPDeployer).deploy(cookLPDeployer.address)) as RewardVesting;
+    const pool1rewardVesting = (await RewardVestingFactory.connect(cookLPDeployer).deploy(cookLPDeployer.address)) as RewardVesting;
+    console.log("======= Reward Vesting for pool 0 deployed ======= : ", pool0rewardVesting.address);
+    console.log("======= Reward Vesting for pool 1 deployed ======= : ", pool1rewardVesting.address);
 
     const stakingPools = (await StakingPoolsFactory.connect(cookLPDeployer).deploy(
       cook.address,
@@ -90,16 +92,17 @@ async function main() {
     await cli.mint(stakingPools.address, "100000000000000000000000000"); 
 
     console.log("======= Staking program  deployed ======= : ", stakingPools.address);
-    await rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
+    await pool0rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
+    await pool1rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
 
     const rewardRate = "10000000000000000000";
       
-    await stakingPools.connect(cookLPDeployer).createPool(cli.address, true, rewardVesting.address, 86400 * 14, 86400 * 14, 20);
+    await stakingPools.connect(cookLPDeployer).createPool(cli.address, true, pool0rewardVesting.address, 86400 * 14, 86400 * 14, 20);
     await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
     await stakingPools.connect(cookLPDeployer).setRewardWeights([1]);
     await stakingPools.connect(cookLPDeployer).startReferralBonus(0);
 
-    await stakingPools.connect(cookLPDeployer).createPool(cook.address, true, rewardVesting.address, 86400 * 90, 86400 * 90, 20);
+    await stakingPools.connect(cookLPDeployer).createPool(cook.address, true, pool1rewardVesting.address, 86400 * 90, 86400 * 90, 20);
 
     const cliPoolRewardAddress = await stakingPools.connect(cookLPDeployer).getPoolRewardVesting(0);
     const cliPoolLockupPeriod = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(0);
