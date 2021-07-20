@@ -95,7 +95,7 @@ async function main() {
     await pool0rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
     await pool1rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
 
-    const rewardRate = "10000000000000000000";
+    const rewardRate = "1000000";
       
     await stakingPools.connect(cookLPDeployer).createPool(cli.address, true, pool0rewardVesting.address, 86400 * 14, 86400 * 14, 20);
     await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
@@ -122,7 +122,7 @@ async function main() {
     console.log("================ pool 1 vesting period  ================:", cookPoolVestingDuration.toNumber())
     console.log("================ pool 1 slash percentage  ================:", cookPoolSlashPercentage.toNumber())
 
-    await cli.connect(cookLPDeployer).approve(stakingPools.address, "100000000000000000000"); 
+    await cli.connect(cookLPDeployer).approve(stakingPools.address, "100000000000000000000000000"); 
     await stakingPools.connect(cookLPDeployer).deposit(0, "1000000000000000" , ZERO_ADDRESS);
 
     // For testing vesrting reward
