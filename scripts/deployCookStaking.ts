@@ -75,15 +75,14 @@ async function main() {
     /**
      * Deploy reward vesting
      */
-    const pool0rewardVesting = (await RewardVestingFactory.connect(cookLPDeployer).deploy(cookLPDeployer.address)) as RewardVesting;
-    const pool1rewardVesting = (await RewardVestingFactory.connect(cookLPDeployer).deploy(cookLPDeployer.address)) as RewardVesting;
-    console.log("======= Reward Vesting for pool 0 deployed ======= : ", pool0rewardVesting.address);
-    console.log("======= Reward Vesting for pool 1 deployed ======= : ", pool1rewardVesting.address);
+    const rewardVesting = (await RewardVestingFactory.connect(cookLPDeployer).deploy(cookLPDeployer.address)) as RewardVesting;
+    console.log("======= Reward Vesting deployed ======= : ", rewardVesting.address);
 
     const stakingPools = (await StakingPoolsFactory.connect(cookLPDeployer).deploy(
       cook.address,
       cookLPDeployer.address,
       cookLPDeployer.address,
+      rewardVesting.address
     )) as StakingPools;
 
     await cook.mint(cookLPDeployer.address, "100000000000000000000000000");
@@ -92,35 +91,26 @@ async function main() {
     await cli.mint(stakingPools.address, "100000000000000000000000000"); 
 
     console.log("======= Staking program  deployed ======= : ", stakingPools.address);
-    await pool0rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
-    await pool1rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
+    await rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
 
-    const rewardRate = "1000000";
+    const rewardRate = "1000000000000000000";
       
-    await stakingPools.connect(cookLPDeployer).createPool(cli.address, true, pool0rewardVesting.address, 86400 * 14, 86400 * 14);
+    await stakingPools.connect(cookLPDeployer).createPool(cli.address, true, 86400 * 14, 86400 * 14);
     await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
-    await stakingPools.connect(cookLPDeployer).setRewardWeights([1]);
     await stakingPools.connect(cookLPDeployer).startReferralBonus(0);
 
-    await stakingPools.connect(cookLPDeployer).createPool(cook.address, true, pool1rewardVesting.address, 86400 * 90, 86400 * 90);
+    await stakingPools.connect(cookLPDeployer).createPool(cook.address, true, 86400 * 90, 86400 * 90);
+    await stakingPools.connect(cookLPDeployer).setRewardWeights([1, 1]);
 
-    const cliPoolRewardAddress = await stakingPools.connect(cookLPDeployer).getPoolRewardVesting(0);
     const cliPoolLockupPeriod = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(0);
-    const cliPoolSlashPercentage = await stakingPools.connect(cookLPDeployer).getPoolSlashPercentage(0);
     const cliPoolVestingDuration = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(0)
-    console.log("================ pool 0 reward address ================:", cliPoolRewardAddress)
     console.log("================ pool 0 lockup period  ================:", cliPoolLockupPeriod.toNumber())
     console.log("================ pool 0 vesting period  ================:", cliPoolVestingDuration.toNumber())
-    console.log("================ pool 0 slash percentage  ================:", cliPoolSlashPercentage.toNumber())
 
-    const cookPoolRewardAddress = await stakingPools.connect(cookLPDeployer).getPoolRewardVesting(1);
     const cookPoolLockupPeriod = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
-    const cookPoolSlashPercentage = await stakingPools.connect(cookLPDeployer).getPoolSlashPercentage(1);
     const cookPoolVestingDuration = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
-    console.log("================ pool 1 reward address ================:", cookPoolRewardAddress)
     console.log("================ pool 1 lockup period  ================:", cookPoolLockupPeriod.toNumber())
     console.log("================ pool 1 vesting period  ================:", cookPoolVestingDuration.toNumber())
-    console.log("================ pool 1 slash percentage  ================:", cookPoolSlashPercentage.toNumber())
 
     await cli.connect(cookLPDeployer).approve(stakingPools.address, "100000000000000000000000000"); 
     await stakingPools.connect(cookLPDeployer).deposit(0, "1000000000000000" , ZERO_ADDRESS);
@@ -141,10 +131,22 @@ async function main() {
       const amount = ethers.utils.parseEther((i + 1).toString())
       await stakingPools.connect(depositors[i]).deposit(0, amount , referrals[i].address);
 
+      await cook.mint(depositors[i].address, "100000000000000000000000000");
+      await cook.connect(depositors[i]).approve(stakingPools.address, "100000000000000000000000000");
+      await stakingPools.connect(depositors[i]).deposit(1, amount , ZERO_ADDRESS);
+
       for (var j = 0; j < 50; j++) {
         await hre().network.provider.send("evm_mine", []);
       }
     }
+
+    for (var i = 0; i < depositors.length; i++) {
+      await stakingPools.connect(depositors[i]).claim(0);      
+      await stakingPools.connect(depositors[i]).claim(1);
+    }
+
+    await hre().network.provider.send("evm_increaseTime", [86400 * 15]); 
+    await hre().network.provider.send("evm_mine", []);
 
     const numOfReferrals = stakingPools.connect(cookLPDeployer).nextReferral(0);
     console.log("====== pool 0 referrals: ======", (await numOfReferrals).toNumber())

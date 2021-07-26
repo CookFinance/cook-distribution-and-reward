@@ -65,7 +65,9 @@ contract StakingPools is ReentrancyGuard {
 
   event PoolCreated(
     uint256 indexed poolId,
-    IERC20 indexed token
+    IERC20 indexed token,
+    uint256 vestingDurationInSecs, 
+    uint256 depositLockPeriodInSecs
   );
 
   event TokensDeposited(
@@ -247,7 +249,7 @@ contract StakingPools is ReentrancyGuard {
   }
 
   /// @dev Creates a new pool.
-  function createPool(IERC20 _token, bool _needVesting, uint256 vestingDurationInSecs, uint256 depositLockPeriodInSecs) external onlyGovernance returns (uint256) {
+  function createPool(IERC20 _token, bool _needVesting, uint256 _vestingDurationInSecs, uint256 _depositLockPeriodInSecs) external onlyGovernance returns (uint256) {
     require(tokenPoolIds[_token] == 0, "StakingPools: token already has a pool");
 
     uint256 _poolId = _pools.length();
@@ -263,7 +265,7 @@ contract StakingPools is ReentrancyGuard {
       onReferralBonus: false,
       totalReferralAmount: 0,
       accumulatedReferralWeight: FixedPointMath.uq192x64(0),
-      lockUpPeriodInSecs: depositLockPeriodInSecs
+      lockUpPeriodInSecs: _depositLockPeriodInSecs
     }));
 
     tokenPoolIds[_token] = _poolId + 1;

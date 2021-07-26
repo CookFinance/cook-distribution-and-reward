@@ -286,7 +286,7 @@ describe("StakingPools", () => {
       it("emits PoolCreated event", async () => {
         expect(pools.createPool(token.address,true, 300, 0))
           .emit(pools, "PoolCreated")
-          .withArgs(0, token.address);
+          .withArgs(0, token.address, 300, 0);
       });
 
       context("when reusing token", async () => {
@@ -1432,42 +1432,5 @@ describe("StakingPools", () => {
         expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount  * 0)
       })
     })
-  })
-
-  describe("Accrue insurrance fee", () => {
-    let depositor1: Signer;
-    let depositor2: Signer;
-    let depositor3: Signer;
-    let depositor4: Signer;
-
-    let token: MockCOOK;
-
-    let rewardWeight = 1;
-    let depositAmount = 50000;
-    let rewardRate = 5000;
-    let day = 86400
-
-    beforeEach(async() => {
-      token = (await MockCOOKFactory.connect(deployer).deploy(
-        "1000000000000000000"
-      )) as MockCOOK;
-
-      await pools.connect(governance).createPool(token.address,true,rewardVesting.address,300, 0);
-      await pools.connect(governance).setRewardWeights([1]);  
-    })
-
-    beforeEach(async () => {
-      [depositor1, depositor2, depositor3, depositor4,  ...signers] = signers;
-
-      await token.connect(depositor1).mint(await depositor1.getAddress(), 10000000000000);
-      await token.connect(depositor2).mint(await depositor2.getAddress(), 10000000000000);
-      await token.connect(depositor3).mint(await depositor2.getAddress(), 10000000000000);
-      await token.connect(depositor4).mint(await depositor2.getAddress(), 10000000000000);
-
-      await token.connect(depositor1).approve(pools.address, MAXIMUM_U256);
-      await token.connect(depositor2).approve(pools.address, MAXIMUM_U256);
-      await token.connect(depositor3).approve(pools.address, MAXIMUM_U256);
-      await token.connect(depositor4).approve(pools.address, MAXIMUM_U256);
-    });
   })
 })
