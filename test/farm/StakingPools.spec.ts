@@ -1044,6 +1044,11 @@ describe("StakingPools", () => {
         expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedReward - EPSILON).lte(expectedReward + EPSILON);
       });
 
+      it("Can not referr yourself", async() => {
+        await pools.connect(governance).startReferralBonus(0);
+        expect(pools.deposit(0, depositAmount, await depositor1.getAddress())).revertedWith("Can not referral yourself");
+      })
+
       it("My referee should be correct", async() => {
           await pools.connect(depositor1).deposit(0, depositAmount, await referral1.getAddress());
           await pools.connect(depositor2).deposit(0, depositAmount, await referral2.getAddress());

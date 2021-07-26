@@ -325,6 +325,8 @@ contract StakingPools is ReentrancyGuard {
   /// @param _depositAmount the amount of tokens to deposit.
   /// @param referral       the address of referral.
   function deposit(uint256 _poolId, uint256 _depositAmount, address referral) external nonReentrant checkIfNewReferral(_poolId, referral) {
+    require(_depositAmount > 0, "zero deposit");
+
     Pool.Data storage _pool = _pools.get(_poolId);
     _pool.update(_ctx);
 
@@ -603,6 +605,7 @@ contract StakingPools is ReentrancyGuard {
     _stake.totalDeposited = _stake.totalDeposited.add(_depositAmount);
 
     if (_pool.onReferralBonus && _referral != address(0)) {
+      require(msg.sender != _referral, "Can not referral yourself");
       ReferralPower.Data storage _referralPower = _referralPowers[_referral][_poolId];
       _pool.totalReferralAmount = _pool.totalReferralAmount.add(_depositAmount);
       _referralPower.totalDeposited = _referralPower.totalDeposited.add(_depositAmount);
