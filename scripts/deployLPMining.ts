@@ -127,7 +127,7 @@ async function main() {
     await rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
 
     const rewardRate = "10000000000000000000";
-    const createdPoolId = await stakingPools.connect(cookLPDeployer).createPool(pairAddress, true, 86400 * 90);
+    const createdPoolId = await stakingPools.connect(cookLPDeployer).createPool(pairAddress, true, 86400 * 90, 86400 * 90);
     await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
     await stakingPools.connect(cookLPDeployer).setRewardWeights([1]);
     await stakingPools.connect(cookLPDeployer).startReferralBonus(0);
@@ -138,22 +138,22 @@ async function main() {
     await stakingPools.connect(cookLPDeployer).deposit(0, "1000000000000000" , ZERO_ADDRESS);
 
     // For testing vesrting reward
-    for (var i = 0; i < 5; i++) {
-        for (var j = 0; j < 50; j++) {
-            await hre().network.provider.send("evm_mine", [])
-        }
-        await stakingPools.connect(cookLPDeployer).claim(0);
-        await hre().network.provider.send("evm_increaseTime", [86400 * 2]); 
-    }
+    // for (var i = 0; i < 5; i++) {
+    //     for (var j = 0; j < 50; j++) {
+    //         await hre().network.provider.send("evm_mine", [])
+    //     }
+    //     await stakingPools.connect(cookLPDeployer).claim(0);
+    //     await hre().network.provider.send("evm_increaseTime", [86400 * 2]); 
+    // }
 
     // For testing referral
     for (var i = 0; i < depositors.length; i++) {
       await CookWETH.connect(depositors[i]).approve(stakingPools.address, "10000000000000000000000");
       await stakingPools.connect(depositors[i]).deposit(0, "1000000000000000" , referrals[i].address);
 
-      for (var j = 0; j < 50; j++) {
-        await hre().network.provider.send("evm_mine", []);
-      }
+      // for (var j = 0; j < 50; j++) {
+      //   await hre().network.provider.send("evm_mine", []);
+      // }
     }
 
     const numOfReferrals = stakingPools.connect(cookLPDeployer).nextReferral(0);

@@ -56,7 +56,6 @@ library Pool {
     uint256 totalReferralAmount; // deposited through referral
     FixedPointMath.uq192x64 accumulatedReferralWeight;
     uint256 lockUpPeriodInSecs;
-    uint256 insurancePercentage; // 0 - 100
   }
 
   struct List {

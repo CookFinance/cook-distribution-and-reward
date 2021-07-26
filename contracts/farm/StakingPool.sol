@@ -113,10 +113,6 @@ contract StakingPools is ReentrancyGuard {
     uint256 poolId
   );
 
-  event AccrueInsurance(
-    uint256 poolId, uint256 amount, address destination
-  );
-
   /// @dev The token which will be minted as a reward for staking.
   IERC20 public reward;
 
@@ -139,11 +135,6 @@ contract StakingPools is ReentrancyGuard {
   Pool.List private _pools;
 
   uint256 public SECONDS_PER_DAY = 86400;
-
-  /// @dev A mapping of pool to all depositors
-  mapping(uint256 => address[]) private allDepositorsInPool;
-
-  mapping(uint256 => mapping(address => bool)) private depositorIsKnown;
 
   /// @dev A mapping of all of the user stakes mapped first by pool and then by address.
   mapping(address => mapping(uint256 => Stake.Data)) private _stakes;
@@ -254,7 +245,7 @@ contract StakingPools is ReentrancyGuard {
   }
 
   /// @dev Creates a new pool.
-  function createPool(IERC20 _token, bool _needVesting, address _rewardVesting, uint256 _vestingDurationInSecs, uint256 _depositLockPeriodInSecs, uint256 _insurancePercentage) external onlyGovernance returns (uint256) {
+  function createPool(IERC20 _token, bool _needVesting, address _rewardVesting, uint256 _vestingDurationInSecs, uint256 _depositLockPeriodInSecs) external onlyGovernance returns (uint256) {
     require(tokenPoolIds[_token] == 0, "StakingPools: token already has a pool");
 
     uint256 _poolId = _pools.length();
@@ -266,8 +257,6 @@ contract StakingPools is ReentrancyGuard {
       require(_rewardVesting == address(0), "no needs rewardvesting");
       require(_vestingDurationInSecs == 0, "vestig period should 0");
     }
-
-    require (_insurancePercentage >= 0 && _insurancePercentage <= 50, "invalid insurance percentage");
 
     _pools.push(Pool.Data({
       token: _token,
@@ -281,8 +270,7 @@ contract StakingPools is ReentrancyGuard {
       totalReferralAmount: 0,
       accumulatedReferralWeight: FixedPointMath.uq192x64(0),
       lockUpPeriodInSecs: _depositLockPeriodInSecs,
-      rewardVesting: IRewardVesting(_rewardVesting),
-      insurancePercentage: _insurancePercentage
+      rewardVesting: IRewardVesting(_rewardVesting)
     }));
 
     tokenPoolIds[_token] = _poolId + 1;
@@ -573,12 +561,6 @@ contract StakingPools is ReentrancyGuard {
     return _pool.lockUpPeriodInSecs;
   }
 
-  function getPoolSlashPercentage(uint256 _poolId) external view returns(uint256) {
-    Pool.Data storage _pool = _pools.get(_poolId); 
-    return _pool.insurancePercentage;
-  }
-
-
   /// @dev Updates all of the pools.
   function _updatePools() internal {
     for (uint256 _poolId = 0; _poolId < _pools.length(); _poolId++) {
@@ -612,11 +594,6 @@ contract StakingPools is ReentrancyGuard {
     }
 
     _pool.token.safeTransferFrom(msg.sender, address(this), _depositAmount);
-
-    if (depositorIsKnown[_poolId][msg.sender] == false) {
-      depositorIsKnown[_poolId][msg.sender] = true;
-      allDepositorsInPool[_poolId].push(msg.sender);
-    }
 
     emit TokensDeposited(msg.sender, _poolId, _depositAmount);
   }
@@ -724,12 +701,6 @@ contract StakingPools is ReentrancyGuard {
       emit PauseUpdated(_pause);
   }
 
-  function setInsurancePercentage(uint256 _poolId, uint256 _insurancePercentage) external onlyGovernance {
-      require (_insurancePercentage >= 0 && _insurancePercentage <= 50, "invalid insurance percentage");
-      Pool.Data storage _pool = _pools.get(_poolId);
-      _pool.insurancePercentage = _insurancePercentage;
-  }
-
   /// @dev To start referral power calculation for a pool, referral power caculation won't turn on if the onReferralBonus is not set
   ///
   /// @param _poolId the pool to start referral power accumulation
@@ -750,46 +721,6 @@ contract StakingPools is ReentrancyGuard {
       require(_pool.onReferralBonus == true, "referral not turned on");
       _pool.onReferralBonus = false;
       emit StopPoolReferralCompetition(_poolId);
-  }
-
-  function accrueInsurance(uint256 _poolId) external onlyGovernance {
-    address[] storage allDepositors = allDepositorsInPool[_poolId];
-    Pool.Data storage _pool = _pools.get(_poolId);
-
-    uint256 insurancePercentage = _pool.insurancePercentage;
-    require(insurancePercentage > 0, "insurancePercentage should not be 0");
-    uint256 totalAmountToAccrue = _pool.totalDeposited.mul(insurancePercentage).div(100);
-    uint256 accumulatedInsurrance = 0;
-    
-
-    for (uint256 i = 0; i < allDepositors.length; i++) {
-      address depositor = allDepositors[i];
-      Stake.Data storage _stake = _stakes[depositor][_poolId]; 
-
-      uint256 amountToAccruePerDepositor = _stake.totalDeposited.mul(insurancePercentage).div(100);
-
-      _stake.totalDeposited = _stake.totalDeposited.sub(amountToAccruePerDepositor);
-
-
-
-      //accrue insurrance fee from latest deposit
-      for (uint256 j =  _stake.deposits.length - 1; j >= 0; j--) {
-        if (amountToAccruePerDepositor == 0) {
-          break;
-        }
-
-        uint256 depositAmount = _stake.deposits[j].amount;
-        uint256 accrueAmount =  depositAmount > amountToAccruePerDepositor
-                              ? amountToAccruePerDepositor : depositAmount;
-        _stake.deposits[j].amount = depositAmount.sub(accrueAmount);
-        amountToAccruePerDepositor = amountToAccruePerDepositor.sub(accrueAmount);        
-      }
-    }
-
-    _pool.totalDeposited = _pool.totalDeposited.sub(totalAmountToAccrue);
-    _pool.token.safeTransfer(msg.sender, totalAmountToAccrue);
-
-    emit AccrueInsurance(_poolId, totalAmountToAccrue, msg.sender);
   }
 
   function isPoolReferralProgramOn(uint256 _poolId) external view returns (bool) {

@@ -97,12 +97,12 @@ async function main() {
 
     const rewardRate = "1000000";
       
-    await stakingPools.connect(cookLPDeployer).createPool(cli.address, true, pool0rewardVesting.address, 86400 * 14, 86400 * 14, 20);
+    await stakingPools.connect(cookLPDeployer).createPool(cli.address, true, pool0rewardVesting.address, 86400 * 14, 86400 * 14);
     await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
     await stakingPools.connect(cookLPDeployer).setRewardWeights([1]);
     await stakingPools.connect(cookLPDeployer).startReferralBonus(0);
 
-    await stakingPools.connect(cookLPDeployer).createPool(cook.address, true, pool1rewardVesting.address, 86400 * 90, 86400 * 90, 20);
+    await stakingPools.connect(cookLPDeployer).createPool(cook.address, true, pool1rewardVesting.address, 86400 * 90, 86400 * 90);
 
     const cliPoolRewardAddress = await stakingPools.connect(cookLPDeployer).getPoolRewardVesting(0);
     const cliPoolLockupPeriod = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(0);
@@ -138,7 +138,7 @@ async function main() {
     for (var i = 0; i < depositors.length; i++) {
       await cli.mint(depositors[i].address, "100000000000000000000000000");
       await cli.connect(depositors[i]).approve(stakingPools.address, "100000000000000000000000000");
-      const amount = ethers.utils.parseEther(i.toString())
+      const amount = ethers.utils.parseEther((i + 1).toString())
       await stakingPools.connect(depositors[i]).deposit(0, amount , referrals[i].address);
 
       for (var j = 0; j < 50; j++) {
