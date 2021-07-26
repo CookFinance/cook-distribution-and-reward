@@ -25,7 +25,6 @@ import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import {FixedPointMath} from "../lib/FixedPointMath.sol";
 import {IDetailedERC20} from "../interfaces/IDetailedERC20.sol";
-import {IRewardVesting} from "../interfaces/IRewardVesting.sol";
 
 /// @title Pool
 ///
