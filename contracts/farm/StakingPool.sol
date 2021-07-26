@@ -65,10 +65,7 @@ contract StakingPools is ReentrancyGuard {
 
   event PoolCreated(
     uint256 indexed poolId,
-    IERC20 indexed token,
-    IRewardVesting rewardVesting,
-    uint256 vestingDurationInSecs,
-    uint256 depositLockPeriodInSecs
+    IERC20 indexed token
   );
 
   event TokensDeposited(
@@ -98,7 +95,7 @@ contract StakingPools is ReentrancyGuard {
   );
 
   event RewardVestingUpdated(
-    uint256 poolId, IRewardVesting rewardVesting
+    IRewardVesting rewardVesting
   );
 
   event NewReferralAdded(
@@ -115,6 +112,9 @@ contract StakingPools is ReentrancyGuard {
 
   /// @dev The token which will be minted as a reward for staking.
   IERC20 public reward;
+
+  /// @dev The address of reward vesting.
+  IRewardVesting public rewardVesting;
 
   /// @dev The address of the account which currently has administrative capabilities over this contract.
   address public governance;
@@ -163,7 +163,8 @@ contract StakingPools is ReentrancyGuard {
   constructor(
     IMintableERC20 _reward,
     address _governance,
-    address _sentinel
+    address _sentinel,
+    IRewardVesting _rewardVesting
   ) public {
     require(_governance != address(0), "StakingPools: governance address cannot be 0x0");
     require(_sentinel != address(0), "StakingPools: sentinel address cannot be 0x0");
@@ -171,6 +172,7 @@ contract StakingPools is ReentrancyGuard {
     reward = _reward;
     governance = _governance;
     sentinel = _sentinel;
+    rewardVesting = _rewardVesting;
   }
 
   /// @dev A modifier which reverts when the caller is not the governance.
@@ -245,18 +247,10 @@ contract StakingPools is ReentrancyGuard {
   }
 
   /// @dev Creates a new pool.
-  function createPool(IERC20 _token, bool _needVesting, address _rewardVesting, uint256 _vestingDurationInSecs, uint256 _depositLockPeriodInSecs) external onlyGovernance returns (uint256) {
+  function createPool(IERC20 _token, bool _needVesting, uint256 vestingDurationInSecs, uint256 depositLockPeriodInSecs) external onlyGovernance returns (uint256) {
     require(tokenPoolIds[_token] == 0, "StakingPools: token already has a pool");
 
     uint256 _poolId = _pools.length();
-
-    if (_needVesting) {
-      require(_rewardVesting != address(0), "needs rewardvesting");
-      require(_vestingDurationInSecs != 0, "vestig period should not 0");
-    } else {
-      require(_rewardVesting == address(0), "no needs rewardvesting");
-      require(_vestingDurationInSecs == 0, "vestig period should 0");
-    }
 
     _pools.push(Pool.Data({
       token: _token,
@@ -269,14 +263,12 @@ contract StakingPools is ReentrancyGuard {
       onReferralBonus: false,
       totalReferralAmount: 0,
       accumulatedReferralWeight: FixedPointMath.uq192x64(0),
-      lockUpPeriodInSecs: _depositLockPeriodInSecs,
-      rewardVesting: IRewardVesting(_rewardVesting)
+      lockUpPeriodInSecs: depositLockPeriodInSecs
     }));
 
     tokenPoolIds[_token] = _poolId + 1;
 
-    emit PoolCreated(_poolId, _token, IRewardVesting(_rewardVesting), _vestingDurationInSecs, _depositLockPeriodInSecs);
-
+    emit PoolCreated(_poolId, _token, _vestingDurationInSecs, _depositLockPeriodInSecs);
     return _poolId;
   }
 
@@ -546,11 +538,6 @@ contract StakingPools is ReentrancyGuard {
     return withdrawAble;
   }
 
-  function getPoolRewardVesting(uint256 _poolId) external view returns(IRewardVesting) {
-    Pool.Data storage _pool = _pools.get(_poolId);
-    return _pool.rewardVesting;
-  }
-
   function getPoolLockPeriodInSecs(uint256 _poolId) external view returns(uint256) {
     Pool.Data storage _pool = _pools.get(_poolId); 
     return _pool.lockUpPeriodInSecs;
@@ -653,13 +640,9 @@ contract StakingPools is ReentrancyGuard {
     uint256 _claimAmount = _stake.totalUnclaimed;
     _stake.totalUnclaimed = 0;
 
-    if (_pool.needVesting) {
-      require(_pool.rewardVesting != IRewardVesting(0), "pool rewardVesting not set");
-    }
-
     if(_pool.needVesting){
-      reward.approve(address(_pool.rewardVesting),uint(-1));
-      _pool.rewardVesting.addEarning(msg.sender, _claimAmount, _pool.vestingDurationInSecs);
+      reward.approve(address(rewardVesting),uint(-1));
+      rewardVesting.addEarning(msg.sender, _claimAmount, _pool.vestingDurationInSecs);
     } else {
       reward.safeTransfer(msg.sender, _claimAmount);
     }
@@ -670,11 +653,10 @@ contract StakingPools is ReentrancyGuard {
   /// @dev Updates the reward vesting contract
   ///
   /// @param _rewardVesting the new reward vesting contract
-  function setRewardVesting(uint256 _poolId, IRewardVesting _rewardVesting) external {
+  function setRewardVesting(IRewardVesting _rewardVesting) external {
     require(pause && (msg.sender == governance || msg.sender == sentinel), "StakingPools: not paused, or not governance or sentinel");
-    Pool.Data storage _pool = _pools.get(_poolId);
-    _pool.rewardVesting = _rewardVesting;
-    emit RewardVestingUpdated(_poolId, _rewardVesting);
+    rewardVesting = _rewardVesting;
+    emit RewardVestingUpdated(_rewardVesting);
   }
 
   /// @dev Sets the address of the sentinel
