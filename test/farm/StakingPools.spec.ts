@@ -1291,22 +1291,22 @@ describe("StakingPools", () => {
 
       it("getWithdrawAbleAmount should return zeo when deposits are still lockup", async () => {
         await pools.deposit(0, depositAmount, ZERO_ADDRESS);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(0)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(0)
 
         await increaseTime(ethers.provider, day * 31);
         await mineBlocks(ethers.provider,1);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(0)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(0)
 
         await increaseTime(ethers.provider, day * 58);
         await mineBlocks(ethers.provider,1);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(0)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(0)
       });
   
       it("getWithdrawAbleAmount should return deposit when after lockup period", async () => {
         await pools.deposit(0, depositAmount, ZERO_ADDRESS);
         await increaseTime(ethers.provider, day * 91);
         await mineBlocks(ethers.provider, 1);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount)
       });
 
       it("multiple deposits should work", async() => {
@@ -1320,11 +1320,11 @@ describe("StakingPools", () => {
 
         await increaseTime(ethers.provider, day * 46);
         await mineBlocks(ethers.provider, 1);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount)
         
         await increaseTime(ethers.provider, day * 46);
         await mineBlocks(ethers.provider,1);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 3)
       })
 
@@ -1335,11 +1335,11 @@ describe("StakingPools", () => {
         await mineBlocks(ethers.provider,1);
 
         await pools.withdraw(0, depositAmount * 1);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount * 2)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 2)
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 2)
 
         await pools.withdraw(0, depositAmount * 2);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(0)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(0)
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 0)
       })
 
@@ -1355,33 +1355,33 @@ describe("StakingPools", () => {
         await increaseTime(ethers.provider, day * 46);
         await mineBlocks(ethers.provider, 1);
         // 91 day
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 5)
 
         await pools.withdraw(0, depositAmount * 2);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount * 1)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 1)
 
         // 137 day
         await increaseTime(ethers.provider, day * 46);
         await mineBlocks(ethers.provider, 1);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
         
         await pools.deposit(0, depositAmount * 4, ZERO_ADDRESS);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 7)
 
         // 182 day
         await increaseTime(ethers.provider, day * 45);
         await mineBlocks(ethers.provider, 1);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
 
         // 228 day
         await increaseTime(ethers.provider, day * 46);
         await mineBlocks(ethers.provider, 1);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount * 7)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 7)
 
         await pools.withdraw(0, depositAmount * 6);
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount * 1)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 1)
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 1)
       })
     });
@@ -1403,11 +1403,11 @@ describe("StakingPools", () => {
         expect(pools.withdraw(0, depositAmount * 5)).revertedWith("amount exceeds withdrawAble");
 
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 5)
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount  * 3)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount  * 3)
 
         await pools.withdraw(0, depositAmount * 3)
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 2)
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount  * 0)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount  * 0)
       });      
 
     });
@@ -1429,7 +1429,7 @@ describe("StakingPools", () => {
         await pools.exit(0);
 
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 2)
-        expect(await pools.getWithdrawAbleAmount(0, await depositor.getAddress())).equal(depositAmount  * 0)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount  * 0)
       })
     })
   })

@@ -105,21 +105,21 @@ contract StakingPools is ReentrancyGuard {
   );
 
   event StartPoolReferralCompetition(
-    uint256 poolId
+    uint256 indexed poolId
   );
 
   event StopPoolReferralCompetition(
-    uint256 poolId
+    uint256 indexed poolId
   );
 
   event LockUpPeriodInSecsUpdated (
-    uint256 poolId,
+    uint256 indexed poolId,
     uint256 oldLockPeriodInSecs,
     uint256 newLockPeriodInSecs
   );
 
   event VestingDurationInSecsUpdated (
-    uint256 poolId,
+    uint256 indexed poolId,
     uint256 oldDurationInSecs,
     uint256 newDurationInSecs
   );
@@ -148,7 +148,7 @@ contract StakingPools is ReentrancyGuard {
   /// @dev A list of all of the pools.
   Pool.List private _pools;
 
-  uint256 public SECONDS_PER_DAY = 86400;
+  uint256 constant public SECONDS_PER_DAY = 86400;
 
   /// @dev A mapping of all of the user stakes mapped first by pool and then by address.
   mapping(address => mapping(uint256 => Stake.Data)) private _stakes;
@@ -268,13 +268,13 @@ contract StakingPools is ReentrancyGuard {
 
     _pools.push(Pool.Data({
       token: _token,
+      needVesting: _needVesting,
+      onReferralBonus: false,
       totalDeposited: 0,
       rewardWeight: 0,
       accumulatedRewardWeight: FixedPointMath.uq192x64(0),
       lastUpdatedBlock: block.number,
-      needVesting: _needVesting,
       vestingDurationInSecs: _vestingDurationInSecs,
-      onReferralBonus: false,
       totalReferralAmount: 0,
       accumulatedReferralWeight: FixedPointMath.uq192x64(0),
       lockUpPeriodInSecs: _depositLockPeriodInSecs
@@ -350,7 +350,7 @@ contract StakingPools is ReentrancyGuard {
   /// @param _withdrawAmount  The number of tokens to withdraw.
   function withdraw(uint256 _poolId, uint256 _withdrawAmount) external nonReentrant {
     require(_withdrawAmount > 0, "to withdraw zero");
-    uint256 withdrawAbleAmount = getWithdrawAbleAmount(_poolId, msg.sender);
+    uint256 withdrawAbleAmount = getWithdrawableAmount(_poolId, msg.sender);
     require(withdrawAbleAmount >= _withdrawAmount, "amount exceeds withdrawAble");
 
     Pool.Data storage _pool = _pools.get(_poolId);
@@ -390,7 +390,7 @@ contract StakingPools is ReentrancyGuard {
   ///
   /// @param _poolId the pool to exit from.
   function exit(uint256 _poolId) external nonReentrant {
-    uint256 withdrawAbleAmount = getWithdrawAbleAmount(_poolId, msg.sender);
+    uint256 withdrawAbleAmount = getWithdrawableAmount(_poolId, msg.sender);
     require(withdrawAbleAmount > 0, "all deposited still locked");
 
     Pool.Data storage _pool = _pools.get(_poolId);
@@ -535,7 +535,7 @@ contract StakingPools is ReentrancyGuard {
   }
 
   /// @dev To get withdrawable amount that has passed lockup period of a pool
-  function getWithdrawAbleAmount(uint256 _poolId, address _account) public view returns (uint256) {
+  function getWithdrawableAmount(uint256 _poolId, address _account) public view returns (uint256) {
     Pool.Data storage _pool = _pools.get(_poolId);
     Stake.Data storage _stake = _stakes[_account][_poolId];
     uint256 lockPeriod  = _pool.lockUpPeriodInSecs;

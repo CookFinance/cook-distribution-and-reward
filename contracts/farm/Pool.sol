@@ -42,15 +42,15 @@ library Pool {
 
   struct Data {
     IERC20 token;
+    bool needVesting;
+    bool onReferralBonus;
     uint256 totalDeposited;
     uint256 rewardWeight;
     FixedPointMath.uq192x64 accumulatedRewardWeight;
     // for vesting
     uint256 lastUpdatedBlock;
-    bool needVesting;
     // for referral power calculation
     uint256 vestingDurationInSecs;
-    bool onReferralBonus;
     uint256 totalReferralAmount; // deposited through referral
     FixedPointMath.uq192x64 accumulatedReferralWeight;
     uint256 lockUpPeriodInSecs;
