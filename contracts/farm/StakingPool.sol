@@ -112,6 +112,18 @@ contract StakingPools is ReentrancyGuard {
     uint256 poolId
   );
 
+  event LockUpPeriodInSecsUpdated (
+    uint256 poolId,
+    uint256 oldLockPeriodInSecs,
+    uint256 newLockPeriodInSecs
+  );
+
+  event VestingDurationInSecsUpdated (
+    uint256 poolId,
+    uint256 oldDurationInSecs,
+    uint256 newDurationInSecs
+  );
+
   /// @dev The token which will be minted as a reward for staking.
   IERC20 public reward;
 
@@ -547,7 +559,13 @@ contract StakingPools is ReentrancyGuard {
 
   function getPoolVestingDurationInSecs(uint256 _poolId) external view returns(uint256) {
     Pool.Data storage _pool = _pools.get(_poolId); 
-    return _pool.lockUpPeriodInSecs;
+    return _pool.vestingDurationInSecs;
+  }
+
+  function getPoolDeposits(uint256 _poolId, address _account) public view returns(Deposit[] memory) {
+    Stake.Data storage _stake = _stakes[_account][_poolId];
+    Deposit[] memory deposits = _stake.deposits;
+    return deposits;
   }
 
   /// @dev Updates all of the pools.
@@ -683,6 +701,30 @@ contract StakingPools is ReentrancyGuard {
       require(msg.sender == governance || msg.sender == sentinel, "StakingPools: !(gov || sentinel)");
       pause = _pause;
       emit PauseUpdated(_pause);
+  }
+
+  /// @dev To update a pool's lockup period.
+  ///
+  /// Update a pool's lockup period will affect all current deposits. i.e. if set lock up period to 0, will
+  /// unlock all current desposits.
+  function setPoolLockUpPeriodInSecs(uint256 _poolId, uint256 _newLockUpPeriodInSecs) external  {
+    require(msg.sender == governance || msg.sender == sentinel, "StakingPools: !(gov || sentinel)");
+    Pool.Data storage _pool = _pools.get(_poolId); 
+    uint256 oldLockUpPeriodInSecs = _pool.lockUpPeriodInSecs;
+    _pool.lockUpPeriodInSecs = _newLockUpPeriodInSecs;
+    emit LockUpPeriodInSecsUpdated(_poolId, oldLockUpPeriodInSecs, _pool.lockUpPeriodInSecs);
+  }
+
+
+  /// @dev to change a pool's reward vesting period.
+  ///
+  /// Change a pool's reward vesting period. Reward already in vesting schedule won't be affected by this update.
+  function setPoolVestingDurationInSecs(uint256 _poolId, uint256 _newVestingDurationInSecs) external {
+    require(msg.sender == governance || msg.sender == sentinel, "StakingPools: !(gov || sentinel)");
+    Pool.Data storage _pool = _pools.get(_poolId); 
+    uint256 oldVestingDurationInSecs = _pool.vestingDurationInSecs;
+    _pool.vestingDurationInSecs = _newVestingDurationInSecs;
+    emit VestingDurationInSecsUpdated(_poolId, oldVestingDurationInSecs, _pool.vestingDurationInSecs);
   }
 
   /// @dev To start referral power calculation for a pool, referral power caculation won't turn on if the onReferralBonus is not set
