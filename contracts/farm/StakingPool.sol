@@ -562,7 +562,7 @@ contract StakingPools is ReentrancyGuard {
     return _pool.vestingDurationInSecs;
   }
 
-  function getPoolDeposits(uint256 _poolId, address _account) public view returns(Deposit[] memory) {
+  function getUserDeposits(uint256 _poolId, address _account) public view returns(Deposit[] memory) {
     Stake.Data storage _stake = _stakes[_account][_poolId];
     Deposit[] memory deposits = _stake.deposits;
     return deposits;
