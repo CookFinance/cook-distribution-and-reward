@@ -592,8 +592,8 @@ contract StakingPools is ReentrancyGuard {
 
     _pool.totalDeposited = _pool.totalDeposited.add(_depositAmount);
 
-    Deposit memory deposit = Deposit(_depositAmount, block.timestamp);
-    _stake.deposits.push(deposit);
+    Deposit memory userDeposit = Deposit(_depositAmount, block.timestamp);
+    _stake.deposits.push(userDeposit);
     _stake.totalDeposited = _stake.totalDeposited.add(_depositAmount);
 
     if (_pool.onReferralBonus && _referral != address(0)) {

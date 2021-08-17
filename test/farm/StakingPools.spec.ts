@@ -1328,7 +1328,7 @@ describe("StakingPools", () => {
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 3)
       })
 
-      it("getWithdrawAbleAmount should reduce afte some withdrawAbles", async() => {
+      it("getWithdrawAbleAmount should reduce afte some withdraws", async() => {
         await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 3)
         await increaseTime(ethers.provider, day * 91);
@@ -1343,7 +1343,7 @@ describe("StakingPools", () => {
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 0)
       })
 
-      it("getWithdrawAbleAmount should return correctl value after multiple deposit and withdarws", async() => {
+      it("getWithdrawAbleAmount should return correct value after multiple deposit and withdarws", async() => {
         await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
         expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 3)
 
@@ -1394,7 +1394,7 @@ describe("StakingPools", () => {
         expect(pools.withdraw(0, depositAmount * 3)).revertedWith("amount exceeds withdrawAble");
       });
 
-      it("Withdraw should fail if there is not enough withdraAblw amount", async() => {
+      it("Withdraw should fail if there is not enough withdrawable amount", async() => {
         await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
         await increaseTime(ethers.provider, day * 91);
         await mineBlocks(ethers.provider, 1);
@@ -1415,12 +1415,12 @@ describe("StakingPools", () => {
     context("Exit from a pool with lockup", () => {
       beforeEach(async () => (pools = pools.connect(depositor)));
 
-      it("Exit should fail if there is no withdrable amount", async() => {
+      it("Exit should fail if there is no withdrawable amount", async() => {
         await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
         expect(pools.exit(0)).revertedWith("all deposited still locked");
       })
 
-      it("Exist should only withraw the portion which is withdrable", async() => {
+      it("Exist should only withraw the portion which is withdrawable", async() => {
         await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
         await increaseTime(ethers.provider, day * 91);
         await mineBlocks(ethers.provider, 1);
