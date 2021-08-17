@@ -552,16 +552,19 @@ contract StakingPools is ReentrancyGuard {
     return withdrawAble;
   }
 
+  /// @dev To get a pool lockup period in seconds
   function getPoolLockPeriodInSecs(uint256 _poolId) external view returns(uint256) {
     Pool.Data storage _pool = _pools.get(_poolId); 
     return _pool.lockUpPeriodInSecs;
   }
 
+  /// @dev To get a reward vesting period in seconds
   function getPoolVestingDurationInSecs(uint256 _poolId) external view returns(uint256) {
     Pool.Data storage _pool = _pools.get(_poolId); 
     return _pool.vestingDurationInSecs;
   }
 
+  /// @dev get all user current deposits
   function getUserDeposits(uint256 _poolId, address _account) public view returns(Deposit[] memory) {
     Stake.Data storage _stake = _stakes[_account][_poolId];
     Deposit[] memory deposits = _stake.deposits;
