@@ -1,9 +1,9 @@
 import { ethers } from "hardhat";
 import { ContractTransaction } from "ethers";
-import BigNumber from "bignumber.js";
 import { MockCOOK } from "../typechain/MockCOOK";
 import { RewardVesting } from "../typechain/RewardVesting";
 import { StakingPools } from "../typechain/StakingPools";
+import { BigNumber } from "@ethersproject/bignumber";
 
 
 const ERC20ABI = [ { constant: true, inputs: [], name: "name", outputs: [{ name: "", type: "string" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { name: "_spender", type: "address" }, { name: "_value", type: "uint256" }, ], name: "approve", outputs: [{ name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "totalSupply", outputs: [{ name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { name: "_from", type: "address" }, { name: "_to", type: "address" }, { name: "_value", type: "uint256" }, ], name: "transferFrom", outputs: [{ name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "decimals", outputs: [{ name: "", type: "uint8" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [{ name: "_owner", type: "address" }], name: "balanceOf", outputs: [{ name: "balance", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "symbol", outputs: [{ name: "", type: "string" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { name: "_to", type: "address" }, { name: "_value", type: "uint256" }, ], name: "transfer", outputs: [{ name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [ { name: "_owner", type: "address" }, { name: "_spender", type: "address" }, ], name: "allowance", outputs: [{ name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { payable: true, stateMutability: "payable", type: "fallback" }, { anonymous: false, inputs: [ { indexed: true, name: "owner", type: "address" }, { indexed: true, name: "spender", type: "address" }, { indexed: false, name: "value", type: "uint256" }, ], name: "Approval", type: "event", }, { anonymous: false, inputs: [ { indexed: true, name: "from", type: "address" }, { indexed: true, name: "to", type: "address" }, { indexed: false, name: "value", type: "uint256" }, ], name: "Transfer", type: "event", }, ];
@@ -46,6 +46,8 @@ async function main() {
     for (var i = 0; i < referrals.length; i++) {
       console.log(referrals[i].address);
     }
+
+    
     // required contracts' addresses
     // TODO: currently set for Rinkeby testnet. should be changed for different chain
     const WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
@@ -54,56 +56,18 @@ async function main() {
     const UNISWAP_FACTORY_ADDRESS = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-    const uniswapRouterV2 = await ethers.getContractAt(UNIV2RouterABI, UNISWAP_ROUTER_ADDRESS);
-    const uniswapFactory = await ethers.getContractAt(UNIFACTORYABI, UNISWAP_FACTORY_ADDRESS);
-    const wETH = await ethers.getContractAt(WETHABI, WETH_ADDRESS);
-
     const MockCOOKFactory = await ethers.getContractFactory("MockCOOK");
     const cook = (await MockCOOKFactory.connect(cookLPDeployer).deploy("100000000000000000000000000")) as MockCOOK;
-    console.log("============== cook address ==============:", cook.address)
+    const cli = (await MockCOOKFactory.connect(cookLPDeployer).deploy("100000000000000000000000000")) as MockCOOK;
 
-    await uniswapFactory.connect(cookLPDeployer).createPair(cook.address, WETH_ADDRESS);
-    const pairAddress = await uniswapFactory.connect(cookLPDeployer).getPair(cook.address, WETH_ADDRESS);
-    console.log("======== liquidity pool created ============:", pairAddress);
-
-    // Mint Cook and swap weth
-    let overrides = {
-      value: ethers.utils.parseEther("1000"),
-      gasLimit: 600000,
-    };
-    await cook.mint(cookLPDeployer.address, "100000000000000000000000000")
-    await wETH.connect(cookLPDeployer).deposit(overrides);
-    await wETH.connect(cookLPDeployer).approve(uniswapRouterV2.address, "10000000000000000000000000");
-    await cook.connect(cookLPDeployer).approve(uniswapRouterV2.address, "10000000000000000000000000");
-    await uniswapRouterV2.connect(cookLPDeployer).addLiquidity(
-      cook.address,
-      WETH_ADDRESS,
-      "100000000000000000000",
-      "100000000000000000",
-      "1000",
-      "1000",
-      cookLPDeployer.address,
-      Date.now() * 2
-    );
-
-    for (var i = 0; i < depositors.length; i++) {
-      await cook.mint(depositors[i].address, "100000000000000000000000000");
-      await wETH.connect(depositors[i]).deposit(overrides);
-      await wETH.connect(depositors[i]).approve(uniswapRouterV2.address, "10000000000000000000000000");
-      await cook.connect(depositors[i]).approve(uniswapRouterV2.address, "10000000000000000000000000");
-    
-      await uniswapRouterV2.connect(depositors[i]).addLiquidity(
-        cook.address,
-        WETH_ADDRESS,
-        "100000000000000000000",
-        "100000000000000000",
-        "1000",
-        "1000",
-        depositors[i].address,
-        Date.now() * 2
-      );
+    const toTokenUnitsBN = (tokenAmount: BigNumber, tokenDecimals: number) => {
+      const amt = BigNumber.from(tokenAmount);
+      const digits = BigNumber.from(10).pow(BigNumber.from(tokenDecimals));
+      return amt.div(digits).toNumber();
     }    
-    
+
+    console.log("============== cli address ==============:", cli.address)
+    console.log("============== cook address ==============:", cook.address)
 
     const StakingPoolsFactory = await ethers.getContractFactory("StakingPools");
     const RewardVestingFactory = await ethers.getContractFactory("RewardVesting");
@@ -121,20 +85,34 @@ async function main() {
       rewardVesting.address
     )) as StakingPools;
 
-    console.log("======= Staking program  deployed ======= : ", stakingPools.address);
+    await cook.mint(cookLPDeployer.address, "100000000000000000000000000");
+    await cook.mint(stakingPools.address, "100000000000000000000000000");  
+    await cli.mint(cookLPDeployer.address, "100000000000000000000000000");
+    await cli.mint(stakingPools.address, "100000000000000000000000000"); 
 
-    cook.connect(cookLPDeployer).transfer(stakingPools.address, "1000000000000000000000000"); 
+    console.log("======= Staking program  deployed ======= : ", stakingPools.address);
     await rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
 
-    const rewardRate = "10000000000000000000";
-    const createdPoolId = await stakingPools.connect(cookLPDeployer).createPool(pairAddress, true, 86400 * 90, 86400 * 90);
+    const rewardRate = "1000000000000000000";
+      
+    await stakingPools.connect(cookLPDeployer).createPool(cli.address, true, 86400 * 14, 86400 * 14);
     await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
-    await stakingPools.connect(cookLPDeployer).setRewardWeights([1]);
     await stakingPools.connect(cookLPDeployer).startReferralBonus(0);
-    // console.log("======== pool created tx ========:", createdPoolId)
 
-    const CookWETH = await ethers.getContractAt(ERC20ABI, pairAddress);
-    CookWETH.connect(cookLPDeployer).approve(stakingPools.address, "10000000000000000000000");
+    await stakingPools.connect(cookLPDeployer).createPool(cook.address, true, 86400 * 90, 86400 * 90);
+    await stakingPools.connect(cookLPDeployer).setRewardWeights([1, 1]);
+
+    const cliPoolLockupPeriod = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(0);
+    const cliPoolVestingDuration = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(0)
+    console.log("================ pool 0 lockup period  ================:", cliPoolLockupPeriod.toNumber())
+    console.log("================ pool 0 vesting period  ================:", cliPoolVestingDuration.toNumber())
+
+    const cookPoolLockupPeriod = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
+    const cookPoolVestingDuration = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
+    console.log("================ pool 1 lockup period  ================:", cookPoolLockupPeriod.toNumber())
+    console.log("================ pool 1 vesting period  ================:", cookPoolVestingDuration.toNumber())
+
+    await cli.connect(cookLPDeployer).approve(stakingPools.address, "100000000000000000000000000"); 
     await stakingPools.connect(cookLPDeployer).deposit(0, "1000000000000000" , ZERO_ADDRESS);
 
     // For testing vesrting reward
@@ -143,37 +121,47 @@ async function main() {
             await hre().network.provider.send("evm_mine", [])
         }
         await stakingPools.connect(cookLPDeployer).claim(0);
-        await hre().network.provider.send("evm_increaseTime", [86400 * 2]); 
+        await hre().network.provider.send("evm_increaseTime", [86400 * 30]); 
     }
 
     // For testing referral
     for (var i = 0; i < depositors.length; i++) {
-      await CookWETH.connect(depositors[i]).approve(stakingPools.address, "10000000000000000000000");
-      await stakingPools.connect(depositors[i]).deposit(0, "1000000000000000" , referrals[i].address);
+      await cli.mint(depositors[i].address, "100000000000000000000000000");
+      await cli.connect(depositors[i]).approve(stakingPools.address, "100000000000000000000000000");
+      const amount = ethers.utils.parseEther((i + 1).toString())
+      await stakingPools.connect(depositors[i]).deposit(0, amount , referrals[i].address);
+
+      await cook.mint(depositors[i].address, "100000000000000000000000000");
+      await cook.connect(depositors[i]).approve(stakingPools.address, "100000000000000000000000000");
+      await stakingPools.connect(depositors[i]).deposit(1, amount , ZERO_ADDRESS);
 
       for (var j = 0; j < 50; j++) {
         await hre().network.provider.send("evm_mine", []);
       }
     }
 
+    for (var i = 0; i < depositors.length; i++) {
+      await stakingPools.connect(depositors[i]).claim(0);      
+      await stakingPools.connect(depositors[i]).claim(1);
+    }
+
+    await hre().network.provider.send("evm_increaseTime", [86400 * 15]); 
+    await hre().network.provider.send("evm_mine", []);
+
     const numOfReferrals = stakingPools.connect(cookLPDeployer).nextReferral(0);
     console.log("====== pool 0 referrals: ======", (await numOfReferrals).toNumber())
 
-    for (var i = 0; i < referrals.length; i++) {
-      const referralPower = await stakingPools.getAccumulatedReferralPower(referrals[i].address, 0)
-      console.log("====== referral power: =======", referralPower.toBigInt().toString());
+    for (var i = 0; i < referrals.length; i++) {  
+      const myReferee = await stakingPools.connect(referrals[i]).getPoolreferee(0, referrals[i].address)
+      var totalRefereeStakeAmount = 0
+
+      for (var j = 0; j < myReferee.length; j++) {
+        const stake = await stakingPools.connect(referrals[i]).getStakeTotalDeposited(myReferee[j], 0)
+        const refereeStake = toTokenUnitsBN(stake, 18)
+        totalRefereeStakeAmount = totalRefereeStakeAmount + refereeStake
+      }
+      console.log("====== referral power: =======", totalRefereeStakeAmount.toString());
     }
-
-    console.log("\n==================== Start of Cook Staking deployment ======================")
-    const CookPoolFactory = await ethers.getContractFactory("CookPool", cookLPDeployer);
-    const cookPool1 = await CookPoolFactory.deploy(cook.address, "10000000000000000000", 0, 0)
-    await cookPool1.deployed()
-    console.log("============== cook pool addres1: ===================", cookPool1.address)
-
-    const cookPool2 = await CookPoolFactory.deploy(cook.address, "20000000000000000000", 0, 0)
-    await cookPool1.deployed();
-    console.log("============== cook pool addres2: ===================", cookPool2.address)
-
 }
 
 main()

@@ -29,9 +29,8 @@ import {FixedPointMath} from "../lib/FixedPointMath.sol";
 import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
 import {IRewardVesting} from "../interfaces/IRewardVesting.sol";
 import {Pool} from "./Pool.sol";
-import {Stake} from "./Stake.sol";
+import {Stake, Deposit} from "./Stake.sol";
 import {ReferralPower} from "./ReferralPower.sol";
-
 // import "hardhat/console.sol";
 
 /// @dev A contract which allows users to stake to farm tokens.
@@ -66,7 +65,9 @@ contract StakingPools is ReentrancyGuard {
 
   event PoolCreated(
     uint256 indexed poolId,
-    IERC20 indexed token
+    IERC20 indexed token,
+    uint256 vestingDurationInSecs, 
+    uint256 depositLockPeriodInSecs
   );
 
   event TokensDeposited(
@@ -103,6 +104,26 @@ contract StakingPools is ReentrancyGuard {
     address referral, address referee
   );
 
+  event StartPoolReferralCompetition(
+    uint256 indexed poolId
+  );
+
+  event StopPoolReferralCompetition(
+    uint256 indexed poolId
+  );
+
+  event LockUpPeriodInSecsUpdated (
+    uint256 indexed poolId,
+    uint256 oldLockPeriodInSecs,
+    uint256 newLockPeriodInSecs
+  );
+
+  event VestingDurationInSecsUpdated (
+    uint256 indexed poolId,
+    uint256 oldDurationInSecs,
+    uint256 newDurationInSecs
+  );
+
   /// @dev The token which will be minted as a reward for staking.
   IERC20 public reward;
 
@@ -127,13 +148,15 @@ contract StakingPools is ReentrancyGuard {
   /// @dev A list of all of the pools.
   Pool.List private _pools;
 
+  uint256 constant public SECONDS_PER_DAY = 86400;
+
   /// @dev A mapping of all of the user stakes mapped first by pool and then by address.
   mapping(address => mapping(uint256 => Stake.Data)) private _stakes;
 
   /// @dev A mapping of all of the referral power mapped first by pool and then by address.
   mapping(address => mapping(uint256 => ReferralPower.Data)) private _referralPowers;
 
-/// @dev A mapping of all of the referee staker power mapped first by pool and then by referral address.
+/// @dev A mapping of all of the referee staker power mapped first by referee and then by pool id to get referral address.
   mapping(address => mapping(uint256 => address)) public myReferral;
 
   /// @dev A mapping of known referrals mapped first by pool and then by address.
@@ -238,28 +261,28 @@ contract StakingPools is ReentrancyGuard {
   }
 
   /// @dev Creates a new pool.
-  function createPool(IERC20 _token, bool _needVesting, uint256 durationInSecs) external onlyGovernance returns (uint256) {
+  function createPool(IERC20 _token, bool _needVesting, uint256 _vestingDurationInSecs, uint256 _depositLockPeriodInSecs) external onlyGovernance returns (uint256) {
     require(tokenPoolIds[_token] == 0, "StakingPools: token already has a pool");
 
     uint256 _poolId = _pools.length();
 
     _pools.push(Pool.Data({
       token: _token,
+      needVesting: _needVesting,
+      onReferralBonus: false,
       totalDeposited: 0,
       rewardWeight: 0,
       accumulatedRewardWeight: FixedPointMath.uq192x64(0),
       lastUpdatedBlock: block.number,
-      needVesting: _needVesting,
-      vestingDurationInSecs: durationInSecs,
-      onReferralBonus: false,
+      vestingDurationInSecs: _vestingDurationInSecs,
       totalReferralAmount: 0,
-      accumulatedReferralWeight: FixedPointMath.uq192x64(0)
+      accumulatedReferralWeight: FixedPointMath.uq192x64(0),
+      lockUpPeriodInSecs: _depositLockPeriodInSecs
     }));
 
     tokenPoolIds[_token] = _poolId + 1;
 
-    emit PoolCreated(_poolId, _token);
-
+    emit PoolCreated(_poolId, _token, _vestingDurationInSecs, _depositLockPeriodInSecs);
     return _poolId;
   }
 
@@ -296,6 +319,8 @@ contract StakingPools is ReentrancyGuard {
   /// @param _depositAmount the amount of tokens to deposit.
   /// @param referral       the address of referral.
   function deposit(uint256 _poolId, uint256 _depositAmount, address referral) external nonReentrant checkIfNewReferral(_poolId, referral) {
+    require(_depositAmount > 0, "zero deposit");
+
     Pool.Data storage _pool = _pools.get(_poolId);
     _pool.update(_ctx);
 
@@ -324,6 +349,10 @@ contract StakingPools is ReentrancyGuard {
   /// @param _poolId          The pool to withdraw staked tokens from.
   /// @param _withdrawAmount  The number of tokens to withdraw.
   function withdraw(uint256 _poolId, uint256 _withdrawAmount) external nonReentrant {
+    require(_withdrawAmount > 0, "to withdraw zero");
+    uint256 withdrawAbleAmount = getWithdrawableAmount(_poolId, msg.sender);
+    require(withdrawAbleAmount >= _withdrawAmount, "amount exceeds withdrawAble");
+
     Pool.Data storage _pool = _pools.get(_poolId);
     _pool.update(_ctx);
 
@@ -357,10 +386,13 @@ contract StakingPools is ReentrancyGuard {
     _claim(_poolId);
   }
 
-  /// @dev Claims all rewards from a pool and then withdraws all staked tokens.
+  /// @dev Claims all rewards from a pool and then withdraws all withdrawAble tokens.
   ///
   /// @param _poolId the pool to exit from.
   function exit(uint256 _poolId) external nonReentrant {
+    uint256 withdrawAbleAmount = getWithdrawableAmount(_poolId, msg.sender);
+    require(withdrawAbleAmount > 0, "all deposited still locked");
+
     Pool.Data storage _pool = _pools.get(_poolId);
     _pool.update(_ctx);
 
@@ -375,7 +407,7 @@ contract StakingPools is ReentrancyGuard {
     }
 
     _claim(_poolId);
-    _withdraw(_poolId, _stake.totalDeposited, _referral);
+    _withdraw(_poolId, withdrawAbleAmount, _referral);
   }
 
   /// @dev Gets the rate at which tokens are minted to stakers for all pools.
@@ -502,6 +534,43 @@ contract StakingPools is ReentrancyGuard {
     return myreferees[_poolId][referral];
   }
 
+  /// @dev To get withdrawable amount that has passed lockup period of a pool
+  function getWithdrawableAmount(uint256 _poolId, address _account) public view returns (uint256) {
+    Pool.Data storage _pool = _pools.get(_poolId);
+    Stake.Data storage _stake = _stakes[_account][_poolId];
+    uint256 lockPeriod  = _pool.lockUpPeriodInSecs;
+    uint256 withdrawAble = 0;
+
+    for (uint32 i = 0; i < _stake.deposits.length; i++) {
+      uint256 unlockTimesteamp = _stake.deposits[i].timestamp.div(SECONDS_PER_DAY).mul(SECONDS_PER_DAY).add(_pool.lockUpPeriodInSecs);
+
+      if (block.timestamp >= unlockTimesteamp) {
+        withdrawAble = withdrawAble + _stake.deposits[i].amount;
+      }
+    }
+
+    return withdrawAble;
+  }
+
+  /// @dev To get a pool lockup period in seconds
+  function getPoolLockPeriodInSecs(uint256 _poolId) external view returns(uint256) {
+    Pool.Data storage _pool = _pools.get(_poolId); 
+    return _pool.lockUpPeriodInSecs;
+  }
+
+  /// @dev To get a reward vesting period in seconds
+  function getPoolVestingDurationInSecs(uint256 _poolId) external view returns(uint256) {
+    Pool.Data storage _pool = _pools.get(_poolId); 
+    return _pool.vestingDurationInSecs;
+  }
+
+  /// @dev get all user current deposits
+  function getUserDeposits(uint256 _poolId, address _account) public view returns(Deposit[] memory) {
+    Stake.Data storage _stake = _stakes[_account][_poolId];
+    Deposit[] memory deposits = _stake.deposits;
+    return deposits;
+  }
+
   /// @dev Updates all of the pools.
   function _updatePools() internal {
     for (uint256 _poolId = 0; _poolId < _pools.length(); _poolId++) {
@@ -522,9 +591,13 @@ contract StakingPools is ReentrancyGuard {
     Stake.Data storage _stake = _stakes[msg.sender][_poolId];
 
     _pool.totalDeposited = _pool.totalDeposited.add(_depositAmount);
+
+    Deposit memory userDeposit = Deposit(_depositAmount, block.timestamp);
+    _stake.deposits.push(userDeposit);
     _stake.totalDeposited = _stake.totalDeposited.add(_depositAmount);
 
     if (_pool.onReferralBonus && _referral != address(0)) {
+      require(msg.sender != _referral, "Can not referral yourself");
       ReferralPower.Data storage _referralPower = _referralPowers[_referral][_poolId];
       _pool.totalReferralAmount = _pool.totalReferralAmount.add(_depositAmount);
       _referralPower.totalDeposited = _referralPower.totalDeposited.add(_depositAmount);
@@ -549,6 +622,20 @@ contract StakingPools is ReentrancyGuard {
     _pool.totalDeposited = _pool.totalDeposited.sub(_withdrawAmount);
     _stake.totalDeposited = _stake.totalDeposited.sub(_withdrawAmount);
 
+    // for lockup period
+    uint256 remainingAmount = _withdrawAmount;
+    for (uint256 i = 0; i < _stake.deposits.length; i++) {
+      if (remainingAmount == 0) {
+        break;
+      }
+      uint256 depositAmount = _stake.deposits[i].amount;
+      uint256 unstakeAmount =  depositAmount > remainingAmount
+                              ? remainingAmount : depositAmount;
+      _stake.deposits[i].amount = depositAmount.sub(unstakeAmount);
+      remainingAmount = remainingAmount.sub(unstakeAmount);
+    }
+
+    // for referral
     if (_pool.onReferralBonus && _referral != address(0)) {
       ReferralPower.Data storage _referralPower = _referralPowers[_referral][_poolId];
       _pool.totalReferralAmount = _pool.totalReferralAmount.sub(_withdrawAmount);
@@ -619,6 +706,30 @@ contract StakingPools is ReentrancyGuard {
       emit PauseUpdated(_pause);
   }
 
+  /// @dev To update a pool's lockup period.
+  ///
+  /// Update a pool's lockup period will affect all current deposits. i.e. if set lock up period to 0, will
+  /// unlock all current desposits.
+  function setPoolLockUpPeriodInSecs(uint256 _poolId, uint256 _newLockUpPeriodInSecs) external  {
+    require(msg.sender == governance || msg.sender == sentinel, "StakingPools: !(gov || sentinel)");
+    Pool.Data storage _pool = _pools.get(_poolId); 
+    uint256 oldLockUpPeriodInSecs = _pool.lockUpPeriodInSecs;
+    _pool.lockUpPeriodInSecs = _newLockUpPeriodInSecs;
+    emit LockUpPeriodInSecsUpdated(_poolId, oldLockUpPeriodInSecs, _pool.lockUpPeriodInSecs);
+  }
+
+
+  /// @dev to change a pool's reward vesting period.
+  ///
+  /// Change a pool's reward vesting period. Reward already in vesting schedule won't be affected by this update.
+  function setPoolVestingDurationInSecs(uint256 _poolId, uint256 _newVestingDurationInSecs) external {
+    require(msg.sender == governance || msg.sender == sentinel, "StakingPools: !(gov || sentinel)");
+    Pool.Data storage _pool = _pools.get(_poolId); 
+    uint256 oldVestingDurationInSecs = _pool.vestingDurationInSecs;
+    _pool.vestingDurationInSecs = _newVestingDurationInSecs;
+    emit VestingDurationInSecsUpdated(_poolId, oldVestingDurationInSecs, _pool.vestingDurationInSecs);
+  }
+
   /// @dev To start referral power calculation for a pool, referral power caculation won't turn on if the onReferralBonus is not set
   ///
   /// @param _poolId the pool to start referral power accumulation
@@ -627,6 +738,7 @@ contract StakingPools is ReentrancyGuard {
       Pool.Data storage _pool = _pools.get(_poolId);
       require(_pool.onReferralBonus == false, "referral bonus already on");
       _pool.onReferralBonus = true;
+      emit StartPoolReferralCompetition(_poolId);
   }
 
   /// @dev To stop referral power calculation for a pool, referral power caculation won't turn on if the onReferralBonus is not set
@@ -637,6 +749,12 @@ contract StakingPools is ReentrancyGuard {
       Pool.Data storage _pool = _pools.get(_poolId);
       require(_pool.onReferralBonus == true, "referral not turned on");
       _pool.onReferralBonus = false;
+      emit StopPoolReferralCompetition(_poolId);
+  }
+
+  function isPoolReferralProgramOn(uint256 _poolId) external view returns (bool) {
+      Pool.Data storage _pool = _pools.get(_poolId);
+      return _pool.onReferralBonus;
   }
 }
 

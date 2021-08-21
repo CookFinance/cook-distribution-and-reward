@@ -6,8 +6,7 @@ import {BigNumber, BigNumberish, ContractFactory, Signer} from "ethers";
 import {StakingPools} from "../../typechain/StakingPools";
 import { RewardVesting } from "../../typechain/RewardVesting";
 import { MockCOOK } from "../../typechain/MockCOOk";
-import {MAXIMUM_U256, mineBlocks, ZERO_ADDRESS} from "../utils/helper";
-import { isRegExp } from "util";
+import {MAXIMUM_U256, mineBlocks, ZERO_ADDRESS, increaseTime} from "../utils/helper";
 
 chai.use(solidity);
 
@@ -28,7 +27,6 @@ describe("StakingPools", () => {
   let pools: StakingPools;
   let reward: MockCOOK;
   let rewardVesting: RewardVesting;
-  let rewardRate = 5000;
 
 
   before(async () => {
@@ -53,15 +51,15 @@ describe("StakingPools", () => {
       rewardVesting.address
     )) as StakingPools;
 
-     await rewardVesting.connect(governance).initialize(reward.address, pools.address);
-     reward.connect(deployer).transfer(pools.address, "1000000000000000000000000"); 
+    await rewardVesting.connect(governance).initialize(reward.address, pools.address);
+    reward.connect(deployer).transfer(pools.address, "1000000000000000000000000"); 
   });
 
   describe("set governance", () => {
     it("only allows governance", async () => {
-      expect(pools.setPendingGovernance(await newGovernance.getAddress())).revertedWith(
-        "StakingPools: only governance"
-      );
+  expect(pools.setPendingGovernance(await newGovernance.getAddress())).revertedWith(
+  "StakingPools: only governance"
+  );
     });
 
     context("when caller is governance", () => {
@@ -277,7 +275,7 @@ describe("StakingPools", () => {
     });
 
     it("only allows governance to call", async () => {
-      expect(pools.createPool(token.address,true, 300)).revertedWith(
+      expect(pools.createPool(token.address,true, 300, 0)).revertedWith(
         "StakingPools: only governance"
       );
     });
@@ -286,15 +284,15 @@ describe("StakingPools", () => {
       beforeEach(async () => (pools = pools.connect(governance)));
 
       it("emits PoolCreated event", async () => {
-        expect(pools.createPool(token.address,true, 300))
+        expect(pools.createPool(token.address,true, 300, 0))
           .emit(pools, "PoolCreated")
-          .withArgs(0, token.address);
+          .withArgs(0, token.address, 300, 0);
       });
 
       context("when reusing token", async () => {
         it("reverts", async () => {
-          await pools.createPool(token.address,true,300);
-          expect(pools.createPool(token.address,true,300)).revertedWith("StakingPools: token already has a pool");
+          await pools.createPool(token.address,true,300, 0);
+          expect(pools.createPool(token.address,true,300, 0)).revertedWith("StakingPools: token already has a pool");
         });
       });
     });
@@ -348,7 +346,7 @@ describe("StakingPools", () => {
         });
 
         beforeEach(async () => {
-          await pools.connect(governance).createPool(token.address,true,300);
+          await pools.connect(governance).createPool(token.address,true,300, 0);
         });
 
         shouldBehaveLikeSetRewardWeights([10000]);
@@ -373,7 +371,7 @@ describe("StakingPools", () => {
           for (let n = 0; n < numberPools; n++) {
             await pools
               .connect(governance)
-              .createPool(tokens[n].address,true,300);
+              .createPool(tokens[n].address,true,300, 0);
           }
         });
 
@@ -397,7 +395,7 @@ describe("StakingPools", () => {
       token = (await MockCOOKFactory.connect(deployer).deploy(
         "1000000000000000000"
       )) as MockCOOK;
-      await pools.connect(governance).createPool(token.address,true,300);
+      await pools.connect(governance).createPool(token.address,true,300, 0);
       await pools.connect(governance).setRewardWeights([1]);
     });
 
@@ -482,7 +480,7 @@ describe("StakingPools", () => {
         "1000000000000000000"
       )) as MockCOOK;
 
-      await pools.connect(governance).createPool(token.address,true,300);
+      await pools.connect(governance).createPool(token.address,true,300, 0);
       await pools.connect(governance).setRewardWeights([1]);
     });
 
@@ -580,7 +578,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true,300);
+      await pools.createPool(token.address,true,300,0);
       await pools.setRewardWeights([rewardWeight]);
     });
 
@@ -709,7 +707,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true,300);
+      await pools.createPool(token.address,true,300,0);
       await pools.setRewardWeights([rewardWeight]);
     });
 
@@ -817,7 +815,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,false,0);
+      await pools.createPool(token.address,false,0,0);
       await pools.setRewardWeights([rewardWeight]);
     });
 
@@ -902,7 +900,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true,300);
+      await pools.createPool(token.address,true,300,0);
       await pools.setRewardWeights([rewardWeight]);
       await pools.setRewardRate(rewardRate);
     });
@@ -985,7 +983,7 @@ describe("StakingPools", () => {
     beforeEach(async () => (pools = pools.connect(governance)));
 
     beforeEach(async () => {
-      await pools.createPool(token.address,true,300);
+      await pools.createPool(token.address,true,300,0);
       await pools.setRewardWeights([rewardWeight]);
       await pools.setRewardRate(rewardRate);
     });
@@ -1040,6 +1038,11 @@ describe("StakingPools", () => {
         const expectedReward = rewardRate * (elapsedBlocks * 3 + 3);
         expect(await pools.getStakeTotalUnclaimed(await depositor1.getAddress(), 0)).gte(expectedReward - EPSILON).lte(expectedReward + EPSILON);
       });
+
+      it("Can not referr yourself", async() => {
+        await pools.connect(governance).startReferralBonus(0);
+        expect(pools.deposit(0, depositAmount, await depositor1.getAddress())).revertedWith("Can not referral yourself");
+      })
 
       it("My referee should be correct", async() => {
           await pools.connect(depositor1).deposit(0, depositAmount, await referral1.getAddress());
@@ -1250,4 +1253,184 @@ describe("StakingPools", () => {
       });
     });
   });
-});
+
+  describe("deposit lockup", () => {
+    let depositor: Signer;
+    let token: MockCOOK;
+
+    let rewardWeight = 1;
+    let depositAmount = 50000;
+    let rewardRate = 5000;
+    let day = 86400
+
+    beforeEach(async () => {
+      [depositor, ...signers] = signers;
+
+      token = (await MockCOOKFactory.connect(deployer).deploy(
+        "1000000000000000000"
+      )) as MockCOOK;
+    });
+
+    beforeEach(async () => (token = token.connect(depositor)));
+
+    beforeEach(async () => {
+      await token.mint(await depositor.getAddress(), MAXIMUM_U256);
+      await token.approve(pools.address, MAXIMUM_U256);
+    });
+
+    beforeEach(async () => (pools = pools.connect(governance)));
+
+    beforeEach(async () => {
+      await pools.createPool(token.address , true , day * 30, day * 90);
+      await pools.setRewardWeights([rewardWeight]);
+      await pools.setRewardRate(rewardRate);
+    });    
+
+    context("getWithdrawAbleAmount should return correct amount", () => {
+      beforeEach(async () => (pools = pools.connect(depositor)));
+
+      it("getWithdrawAbleAmount should return zeo when deposits are still lockup", async () => {
+        await pools.deposit(0, depositAmount, ZERO_ADDRESS);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(0)
+
+        await increaseTime(ethers.provider, day * 31);
+        await mineBlocks(ethers.provider,1);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(0)
+
+        await increaseTime(ethers.provider, day * 58);
+        await mineBlocks(ethers.provider,1);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(0)
+      });
+  
+      it("getWithdrawAbleAmount should return deposit when after lockup period", async () => {
+        await pools.deposit(0, depositAmount, ZERO_ADDRESS);
+        await increaseTime(ethers.provider, day * 91);
+        await mineBlocks(ethers.provider, 1);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount)
+      });
+
+      it("multiple deposits should work", async() => {
+        await pools.deposit(0, depositAmount, ZERO_ADDRESS);
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 1)
+
+        await increaseTime(ethers.provider, day * 45);
+        await mineBlocks(ethers.provider, 1);
+        await pools.deposit(0, depositAmount * 2, ZERO_ADDRESS);
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 3)
+
+        await increaseTime(ethers.provider, day * 46);
+        await mineBlocks(ethers.provider, 1);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount)
+        
+        await increaseTime(ethers.provider, day * 46);
+        await mineBlocks(ethers.provider,1);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 3)
+      })
+
+      it("getWithdrawAbleAmount should reduce afte some withdraws", async() => {
+        await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 3)
+        await increaseTime(ethers.provider, day * 91);
+        await mineBlocks(ethers.provider,1);
+
+        await pools.withdraw(0, depositAmount * 1);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 2)
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 2)
+
+        await pools.withdraw(0, depositAmount * 2);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(0)
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 0)
+      })
+
+      it("getWithdrawAbleAmount should return correct value after multiple deposit and withdarws", async() => {
+        await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 3)
+
+        await increaseTime(ethers.provider, day * 45);
+        await mineBlocks(ethers.provider, 1);
+        // 45 day
+        await pools.deposit(0, depositAmount * 2, ZERO_ADDRESS);
+        
+        await increaseTime(ethers.provider, day * 46);
+        await mineBlocks(ethers.provider, 1);
+        // 91 day
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 5)
+
+        await pools.withdraw(0, depositAmount * 2);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 1)
+
+        // 137 day
+        await increaseTime(ethers.provider, day * 46);
+        await mineBlocks(ethers.provider, 1);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
+        
+        await pools.deposit(0, depositAmount * 4, ZERO_ADDRESS);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 7)
+
+        // 182 day
+        await increaseTime(ethers.provider, day * 45);
+        await mineBlocks(ethers.provider, 1);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 3)
+
+        // 228 day
+        await increaseTime(ethers.provider, day * 46);
+        await mineBlocks(ethers.provider, 1);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 7)
+
+        await pools.withdraw(0, depositAmount * 6);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount * 1)
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 1)
+      })
+    });
+
+    context("Withdraw from a pool with lockup", () => {
+      beforeEach(async () => (pools = pools.connect(depositor)));      
+
+      it("Withdaw should fail if there is no withdraAble amount", async() => {
+        await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
+        expect(pools.withdraw(0, depositAmount * 3)).revertedWith("amount exceeds withdrawAble");
+      });
+
+      it("Withdraw should fail if there is not enough withdrawable amount", async() => {
+        await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
+        await increaseTime(ethers.provider, day * 91);
+        await mineBlocks(ethers.provider, 1);
+
+        await pools.deposit(0, depositAmount * 2, ZERO_ADDRESS);
+        expect(pools.withdraw(0, depositAmount * 5)).revertedWith("amount exceeds withdrawAble");
+
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 5)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount  * 3)
+
+        await pools.withdraw(0, depositAmount * 3)
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 2)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount  * 0)
+      });      
+
+    });
+
+    context("Exit from a pool with lockup", () => {
+      beforeEach(async () => (pools = pools.connect(depositor)));
+
+      it("Exit should fail if there is no withdrawable amount", async() => {
+        await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
+        expect(pools.exit(0)).revertedWith("all deposited still locked");
+      })
+
+      it("Exist should only withraw the portion which is withdrawable", async() => {
+        await pools.deposit(0, depositAmount * 3, ZERO_ADDRESS);
+        await increaseTime(ethers.provider, day * 91);
+        await mineBlocks(ethers.provider, 1);
+
+        await pools.deposit(0, depositAmount * 2, ZERO_ADDRESS);
+        await pools.exit(0);
+
+        expect(await pools.getPoolTotalDeposited(0)).equal(depositAmount  * 2)
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount  * 0)
+      })
+    })
+  })
+})

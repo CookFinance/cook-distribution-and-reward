@@ -36,6 +36,7 @@ library Stake {
   using Stake for Stake.Data;
 
   struct Data {
+    Deposit[] deposits;
     uint256 totalDeposited;
     uint256 totalUnclaimed;
     FixedPointMath.uq192x64 lastAccumulatedWeight;
@@ -65,3 +66,8 @@ library Stake {
     return _self.totalUnclaimed.add(_distributedAmount);
   }
 }
+
+struct Deposit {
+  uint256 amount;
+  uint256 timestamp;
+}  
