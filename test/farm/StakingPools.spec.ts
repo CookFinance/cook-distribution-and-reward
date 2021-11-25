@@ -1289,6 +1289,14 @@ describe("StakingPools", () => {
     context("getWithdrawAbleAmount should return correct amount", () => {
       beforeEach(async () => (pools = pools.connect(depositor)));
 
+      it("getWithdrawableAmount should return deposit amount for 0 lockup period should ", async () => {
+        await pools.connect(governance).setPoolLockUpPeriodInSecs(0, 0);
+
+        await pools.connect(depositor).deposit(0, depositAmount, ZERO_ADDRESS);
+        expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(depositAmount)
+        await pools.connect(depositor).withdraw(0, depositAmount);
+      })
+
       it("getWithdrawAbleAmount should return zeo when deposits are still lockup", async () => {
         await pools.deposit(0, depositAmount, ZERO_ADDRESS);
         expect(await pools.getWithdrawableAmount(0, await depositor.getAddress())).equal(0)
