@@ -11,13 +11,14 @@ const UNIV2RouterABI = [ { inputs: [ { internalType: "address", name: "_factory"
 const WETHABI = [ { constant: true, inputs: [], name: "name", outputs: [{ name: "", type: "string" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { name: "guy", type: "address" }, { name: "wad", type: "uint256" }, ], name: "approve", outputs: [{ name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "totalSupply", outputs: [{ name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { name: "src", type: "address" }, { name: "dst", type: "address" }, { name: "wad", type: "uint256" }, ], name: "transferFrom", outputs: [{ name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: false, inputs: [{ name: "wad", type: "uint256" }], name: "withdraw", outputs: [], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "decimals", outputs: [{ name: "", type: "uint8" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [{ name: "", type: "address" }], name: "balanceOf", outputs: [{ name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "symbol", outputs: [{ name: "", type: "string" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { name: "dst", type: "address" }, { name: "wad", type: "uint256" }, ], name: "transfer", outputs: [{ name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: false, inputs: [], name: "deposit", outputs: [], payable: true, stateMutability: "payable", type: "function", }, { constant: true, inputs: [ { name: "", type: "address" }, { name: "", type: "address" }, ], name: "allowance", outputs: [{ name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { payable: true, stateMutability: "payable", type: "fallback" }, { anonymous: false, inputs: [ { indexed: true, name: "src", type: "address" }, { indexed: true, name: "guy", type: "address" }, { indexed: false, name: "wad", type: "uint256" }, ], name: "Approval", type: "event", }, { anonymous: false, inputs: [ { indexed: true, name: "src", type: "address" }, { indexed: true, name: "dst", type: "address" }, { indexed: false, name: "wad", type: "uint256" }, ], name: "Transfer", type: "event", }, { anonymous: false, inputs: [ { indexed: true, name: "dst", type: "address" }, { indexed: false, name: "wad", type: "uint256" }, ], name: "Deposit", type: "event", }, { anonymous: false, inputs: [ { indexed: true, name: "src", type: "address" }, { indexed: false, name: "wad", type: "uint256" }, ], name: "Withdrawal", type: "event", }, ];
 const UNIFACTORYABI = [ { inputs: [ { internalType: "address", name: "_feeToSetter", type: "address" }, ], payable: false, stateMutability: "nonpayable", type: "constructor", }, { anonymous: false, inputs: [ { indexed: true, internalType: "address", name: "token0", type: "address", }, { indexed: true, internalType: "address", name: "token1", type: "address", }, { indexed: false, internalType: "address", name: "pair", type: "address", }, { indexed: false, internalType: "uint256", name: "", type: "uint256" }, ], name: "PairCreated", type: "event", }, { constant: true, inputs: [{ internalType: "uint256", name: "", type: "uint256" }], name: "allPairs", outputs: [{ internalType: "address", name: "", type: "address" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "allPairsLength", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { internalType: "address", name: "tokenA", type: "address" }, { internalType: "address", name: "tokenB", type: "address" }, ], name: "createPair", outputs: [{ internalType: "address", name: "pair", type: "address" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "feeTo", outputs: [{ internalType: "address", name: "", type: "address" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "feeToSetter", outputs: [{ internalType: "address", name: "", type: "address" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [ { internalType: "address", name: "", type: "address" }, { internalType: "address", name: "", type: "address" }, ], name: "getPair", outputs: [{ internalType: "address", name: "", type: "address" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [{ internalType: "address", name: "_feeTo", type: "address" }], name: "setFeeTo", outputs: [], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: false, inputs: [ { internalType: "address", name: "_feeToSetter", type: "address" }, ], name: "setFeeToSetter", outputs: [], payable: false, stateMutability: "nonpayable", type: "function", }, ];
 const UNIV2PAIR = [ { inputs: [], payable: false, stateMutability: "nonpayable", type: "constructor", }, { anonymous: false, inputs: [ { indexed: true, internalType: "address", name: "owner", type: "address", }, { indexed: true, internalType: "address", name: "spender", type: "address", }, { indexed: false, internalType: "uint256", name: "value", type: "uint256", }, ], name: "Approval", type: "event", }, { anonymous: false, inputs: [ { indexed: true, internalType: "address", name: "sender", type: "address", }, { indexed: false, internalType: "uint256", name: "amount0", type: "uint256", }, { indexed: false, internalType: "uint256", name: "amount1", type: "uint256", }, { indexed: true, internalType: "address", name: "to", type: "address" }, ], name: "Burn", type: "event", }, { anonymous: false, inputs: [ { indexed: true, internalType: "address", name: "sender", type: "address", }, { indexed: false, internalType: "uint256", name: "amount0", type: "uint256", }, { indexed: false, internalType: "uint256", name: "amount1", type: "uint256", }, ], name: "Mint", type: "event", }, { anonymous: false, inputs: [ { indexed: true, internalType: "address", name: "sender", type: "address", }, { indexed: false, internalType: "uint256", name: "amount0In", type: "uint256", }, { indexed: false, internalType: "uint256", name: "amount1In", type: "uint256", }, { indexed: false, internalType: "uint256", name: "amount0Out", type: "uint256", }, { indexed: false, internalType: "uint256", name: "amount1Out", type: "uint256", }, { indexed: true, internalType: "address", name: "to", type: "address" }, ], name: "Swap", type: "event", }, { anonymous: false, inputs: [ { indexed: false, internalType: "uint112", name: "reserve0", type: "uint112", }, { indexed: false, internalType: "uint112", name: "reserve1", type: "uint112", }, ], name: "Sync", type: "event", }, { anonymous: false, inputs: [ { indexed: true, internalType: "address", name: "from", type: "address" }, { indexed: true, internalType: "address", name: "to", type: "address" }, { indexed: false, internalType: "uint256", name: "value", type: "uint256", }, ], name: "Transfer", type: "event", }, { constant: true, inputs: [], name: "DOMAIN_SEPARATOR", outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "MINIMUM_LIQUIDITY", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "PERMIT_TYPEHASH", outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [ { internalType: "address", name: "", type: "address" }, { internalType: "address", name: "", type: "address" }, ], name: "allowance", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { internalType: "address", name: "spender", type: "address" }, { internalType: "uint256", name: "value", type: "uint256" }, ], name: "approve", outputs: [{ internalType: "bool", name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [{ internalType: "address", name: "", type: "address" }], name: "balanceOf", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [{ internalType: "address", name: "to", type: "address" }], name: "burn", outputs: [ { internalType: "uint256", name: "amount0", type: "uint256" }, { internalType: "uint256", name: "amount1", type: "uint256" }, ], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "decimals", outputs: [{ internalType: "uint8", name: "", type: "uint8" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "factory", outputs: [{ internalType: "address", name: "", type: "address" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "getReserves", outputs: [ { internalType: "uint112", name: "_reserve0", type: "uint112" }, { internalType: "uint112", name: "_reserve1", type: "uint112" }, { internalType: "uint32", name: "_blockTimestampLast", type: "uint32" }, ], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { internalType: "address", name: "_token0", type: "address" }, { internalType: "address", name: "_token1", type: "address" }, ], name: "initialize", outputs: [], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "kLast", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [{ internalType: "address", name: "to", type: "address" }], name: "mint", outputs: [{ internalType: "uint256", name: "liquidity", type: "uint256" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "name", outputs: [{ internalType: "string", name: "", type: "string" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [{ internalType: "address", name: "", type: "address" }], name: "nonces", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { internalType: "address", name: "owner", type: "address" }, { internalType: "address", name: "spender", type: "address" }, { internalType: "uint256", name: "value", type: "uint256" }, { internalType: "uint256", name: "deadline", type: "uint256" }, { internalType: "uint8", name: "v", type: "uint8" }, { internalType: "bytes32", name: "r", type: "bytes32" }, { internalType: "bytes32", name: "s", type: "bytes32" }, ], name: "permit", outputs: [], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "price0CumulativeLast", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "price1CumulativeLast", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [{ internalType: "address", name: "to", type: "address" }], name: "skim", outputs: [], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: false, inputs: [ { internalType: "uint256", name: "amount0Out", type: "uint256" }, { internalType: "uint256", name: "amount1Out", type: "uint256" }, { internalType: "address", name: "to", type: "address" }, { internalType: "bytes", name: "data", type: "bytes" }, ], name: "swap", outputs: [], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "symbol", outputs: [{ internalType: "string", name: "", type: "string" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [], name: "sync", outputs: [], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: true, inputs: [], name: "token0", outputs: [{ internalType: "address", name: "", type: "address" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "token1", outputs: [{ internalType: "address", name: "", type: "address" }], payable: false, stateMutability: "view", type: "function", }, { constant: true, inputs: [], name: "totalSupply", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], payable: false, stateMutability: "view", type: "function", }, { constant: false, inputs: [ { internalType: "address", name: "to", type: "address" }, { internalType: "uint256", name: "value", type: "uint256" }, ], name: "transfer", outputs: [{ internalType: "bool", name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, { constant: false, inputs: [ { internalType: "address", name: "from", type: "address" }, { internalType: "address", name: "to", type: "address" }, { internalType: "uint256", name: "value", type: "uint256" }, ], name: "transferFrom", outputs: [{ internalType: "bool", name: "", type: "bool" }], payable: false, stateMutability: "nonpayable", type: "function", }, ];
+const issuanceModuleABI = [{"inputs":[{"internalType":"contract IController","name":"_controller","type":"address"},{"internalType":"contract IWETH","name":"_weth","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"_component","type":"address"},{"indexed":false,"internalType":"string","name":"_newExchangeName","type":"string"}],"name":"AssetExchangeExecutionParamUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"_component","type":"address"},{"indexed":false,"internalType":"string","name":"_newWrapAdapterName","type":"string"},{"indexed":false,"internalType":"address","name":"_newUnderlyingToken","type":"address"}],"name":"AssetWrapExecutionParamUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"_ckToken","type":"address"},{"indexed":false,"internalType":"address","name":"_issuer","type":"address"},{"indexed":false,"internalType":"address","name":"_to","type":"address"},{"indexed":false,"internalType":"address","name":"_hookContract","type":"address"},{"indexed":false,"internalType":"uint256","name":"_ckMintQuantity","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"_issuedTokenReturned","type":"uint256"}],"name":"CKTokenIssued","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"_ckToken","type":"address"},{"indexed":false,"internalType":"address","name":"_redeemer","type":"address"},{"indexed":false,"internalType":"address","name":"_to","type":"address"},{"indexed":false,"internalType":"uint256","name":"_quantity","type":"uint256"}],"name":"CKTokenRedeemed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"contract ICKToken","name":"_ckToken","type":"address"},{"indexed":true,"internalType":"address","name":"_sendToken","type":"address"},{"indexed":true,"internalType":"address","name":"_receiveToken","type":"address"},{"indexed":false,"internalType":"contract IExchangeAdapter","name":"_exchangeAdapter","type":"address"},{"indexed":false,"internalType":"uint256","name":"_totalSendAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"_totalReceiveAmount","type":"uint256"}],"name":"ComponentExchanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"contract ICKToken","name":"_ckToken","type":"address"},{"indexed":true,"internalType":"address","name":"_underlyingToken","type":"address"},{"indexed":true,"internalType":"address","name":"_wrappedToken","type":"address"},{"indexed":false,"internalType":"uint256","name":"_underlyingQuantity","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"_wrappedQuantity","type":"uint256"},{"indexed":false,"internalType":"string","name":"_integrationName","type":"string"}],"name":"ComponentUnwrapped","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"contract ICKToken","name":"_ckToken","type":"address"},{"indexed":true,"internalType":"address","name":"_underlyingToken","type":"address"},{"indexed":true,"internalType":"address","name":"_wrappedToken","type":"address"},{"indexed":false,"internalType":"uint256","name":"_underlyingQuantity","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"_wrappedQuantity","type":"uint256"},{"indexed":false,"internalType":"string","name":"_integrationName","type":"string"}],"name":"ComponentWrapped","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"inputs":[],"name":"controller","outputs":[{"internalType":"contract IController","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"name":"exchangeInfo","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"contract ICKToken","name":"_ckToken","type":"address"},{"internalType":"uint256","name":"_quantity","type":"uint256"},{"internalType":"bool","name":"_isIssue","type":"bool"}],"name":"getRequiredComponentIssuanceUnits","outputs":[{"internalType":"address[]","name":"","type":"address[]"},{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"contract ICKToken","name":"_ckToken","type":"address"},{"internalType":"contract IManagerIssuanceHook","name":"_preIssueHook","type":"address"}],"name":"initialize","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract ICKToken","name":"_ckToken","type":"address"},{"internalType":"uint256","name":"_slippage","type":"uint256"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"bool","name":"_returnDust","type":"bool"}],"name":"issueWithEther","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"contract ICKToken","name":"_ckToken","type":"address"},{"internalType":"uint256","name":"_minCkTokenRec","type":"uint256"},{"internalType":"uint256[]","name":"_weightings","type":"uint256[]"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"bool","name":"_returnDust","type":"bool"}],"name":"issueWithEther2","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"contract ICKToken","name":"_ckToken","type":"address"},{"internalType":"address","name":"_issueToken","type":"address"},{"internalType":"uint256","name":"_issueTokenQuantity","type":"uint256"},{"internalType":"uint256","name":"_slippage","type":"uint256"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"bool","name":"_returnDust","type":"bool"}],"name":"issueWithSingleToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract ICKToken","name":"_ckToken","type":"address"},{"internalType":"address","name":"_issueToken","type":"address"},{"internalType":"uint256","name":"_issueTokenQuantity","type":"uint256"},{"internalType":"uint256","name":"_minCkTokenRec","type":"uint256"},{"internalType":"uint256[]","name":"_weightings","type":"uint256[]"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"bool","name":"_returnDust","type":"bool"}],"name":"issueWithSingleToken2","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract ICKToken","name":"","type":"address"}],"name":"managerIssuanceHook","outputs":[{"internalType":"contract IManagerIssuanceHook","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"contract ICKToken","name":"_ckToken","type":"address"},{"internalType":"uint256","name":"_ckTokenQuantity","type":"uint256"},{"internalType":"address","name":"_redeemToken","type":"address"},{"internalType":"address","name":"_to","type":"address"}],"name":"redeemToSingleToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"removeModule","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address[]","name":"_components","type":"address[]"},{"internalType":"string[]","name":"_exchangeNames","type":"string[]"}],"name":"setExchanges","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address[]","name":"_components","type":"address[]"},{"internalType":"string[]","name":"_wrapAdapterNames","type":"string[]"},{"internalType":"address[]","name":"_underlyingTokens","type":"address[]"}],"name":"setWrapAdapters","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"weth","outputs":[{"internalType":"contract IWETH","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"name":"wrapInfo","outputs":[{"internalType":"string","name":"wrapAdapterName","type":"string"},{"internalType":"address","name":"underlyingToken","type":"address"}],"stateMutability":"view","type":"function"}]
 
 export function hre() {
   return require("hardhat");
 }
 
 async function main() {
-    console.log("=========== LP Mining Deployment Start ===========")
+    console.log("=========== Avalanche Farming Deployment Start ===========")
     // await run("compile");
 
     const [
@@ -25,24 +26,14 @@ async function main() {
       depositor1,
       depositor2,
       depositor3,
-      depositor4,
-      depositor5,
-      depositor6,
-      depositor7,
-      depositor8,
       referral1,
       referral2,
       referral3,
-      referral4,
-      referral5,
-      referral6,
-      referral7,
-      referral8,
       ...signers
     ] = await ethers.getSigners();
 
-    const depositors = [depositor1, depositor2, depositor3, depositor4, depositor5, depositor6, depositor7, depositor8];
-    const referrals = [referral1, referral2, referral3, referral4, referral5, referral6, referral7, referral8];
+    const depositors = [depositor1, depositor2, depositor3];
+    const referrals = [referral1, referral2, referral3];
     for (var i = 0; i < referrals.length; i++) {
       console.log(referrals[i].address);
     }
@@ -57,8 +48,11 @@ async function main() {
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
     const MockCOOKFactory = await ethers.getContractFactory("MockCOOK");
+    
     const cook = (await MockCOOKFactory.connect(cookLPDeployer).deploy("100000000000000000000000000")) as MockCOOK;
-    const cli = (await MockCOOKFactory.connect(cookLPDeployer).deploy("100000000000000000000000000")) as MockCOOK;
+    const AEI = await ethers.getContractAt(ERC20ABI, "0xd3b4a602df2a3abdc0ca241674bcd7566aba4d93")
+    const YB_CMI = await ethers.getContractAt(ERC20ABI, "0x6f4a6a855412635668d9ebc69977870a637882ce")
+    const YB_SCI = await ethers.getContractAt(ERC20ABI, "0x1967514beb1464857b54aa3e6cbe4fc7d245fa40")
 
     const toTokenUnitsBN = (tokenAmount: BigNumber, tokenDecimals: number) => {
       const amt = BigNumber.from(tokenAmount);
@@ -66,7 +60,11 @@ async function main() {
       return amt.div(digits).toNumber();
     }    
 
-    console.log("============== cli address ==============:", cli.address)
+    const ether = (amount: number | string): BigNumber => {
+      const weiString = ethers.utils.parseEther(amount.toString());
+      return BigNumber.from(weiString);
+    };
+
     console.log("============== cook address ==============:", cook.address)
 
     const StakingPoolsFactory = await ethers.getContractFactory("StakingPools");
@@ -85,35 +83,71 @@ async function main() {
       rewardVesting.address
     )) as StakingPools;
 
-    await cook.mint(cookLPDeployer.address, "100000000000000000000000000");
+    await cook.mint(depositor1.address, "100000000000000000000000000");
     await cook.mint(stakingPools.address, "100000000000000000000000000");  
-    await cli.mint(cookLPDeployer.address, "100000000000000000000000000");
-    await cli.mint(stakingPools.address, "100000000000000000000000000"); 
 
     console.log("======= Staking program  deployed ======= : ", stakingPools.address);
     await rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
 
     const rewardRate = "1000000000000000000";
       
-    await stakingPools.connect(cookLPDeployer).createPool(cli.address, true, 86400 * 14, 86400 * 14);
+    await stakingPools.connect(cookLPDeployer).createPool(AEI.address, true, 86400 * 14, 0);
+    // await stakingPools.connect(cookLPDeployer).startReferralBonus(0);
+    await stakingPools.connect(cookLPDeployer).createPool(YB_CMI.address, true, 86400 * 14, 0);
+    await stakingPools.connect(cookLPDeployer).createPool(YB_SCI.address, true, 86400 * 14, 0);
     await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
-    await stakingPools.connect(cookLPDeployer).startReferralBonus(0);
-
     await stakingPools.connect(cookLPDeployer).createPool(cook.address, true, 86400 * 90, 86400 * 90);
-    await stakingPools.connect(cookLPDeployer).setRewardWeights([1, 1]);
 
-    const cliPoolLockupPeriod = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(0);
-    const cliPoolVestingDuration = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(0)
-    console.log("================ pool 0 lockup period  ================:", cliPoolLockupPeriod.toNumber())
-    console.log("================ pool 0 vesting period  ================:", cliPoolVestingDuration.toNumber())
+    await stakingPools.connect(cookLPDeployer).setRewardWeights([1, 2, 3, 4]);
 
-    const cookPoolLockupPeriod = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
-    const cookPoolVestingDuration = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
-    console.log("================ pool 1 lockup period  ================:", cookPoolLockupPeriod.toNumber())
-    console.log("================ pool 1 vesting period  ================:", cookPoolVestingDuration.toNumber())
+    const cliPoolLockupPeriod_AEI = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(0);
+    const cliPoolVestingDuration_AEI = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(0)
+    console.log("================ pool AEI lockup period  ================:", cliPoolLockupPeriod_AEI.toNumber())
+    console.log("================ pool AEI vesting period  ================:", cliPoolVestingDuration_AEI.toNumber())
 
-    await cli.connect(cookLPDeployer).approve(stakingPools.address, "100000000000000000000000000"); 
-    await stakingPools.connect(cookLPDeployer).deposit(0, "1000000000000000" , ZERO_ADDRESS);
+    const cookPoolLockupPeriod_MCI = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
+    const cookPoolVestingDuration_MCI = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
+    console.log("================ pool MCI lockup period  ================:", cookPoolLockupPeriod_MCI.toNumber())
+    console.log("================ pool MCI vesting period  ================:", cookPoolVestingDuration_MCI.toNumber())
+
+    const cookPoolLockupPeriod_SCI = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
+    const cookPoolVestingDuration_SCI = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
+    console.log("================ pool SCI lockup period  ================:", cookPoolLockupPeriod_SCI.toNumber())
+    console.log("================ pool SCI vesting period  ================:", cookPoolVestingDuration_SCI.toNumber())
+
+    const cookPoolLockupPeriod_CooK = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
+    const cookPoolVestingDuration_Cook = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
+    console.log("================ pool Cook lockup period  ================:", cookPoolLockupPeriod_CooK.toNumber())
+    console.log("================ pool Cook vesting period  ================:", cookPoolVestingDuration_Cook.toNumber())
+
+    const issuanceModule = await ethers.getContractAt(issuanceModuleABI, "0xa191074fe860cf39de88679a9d66b8d10a540910")
+
+    // issue CkTokens
+    await issuanceModule.connect(depositor1).issueWithEther2(YB_CMI.address, 0, [ether(0.6), ether(0.4)], depositor1.address, true, {value: ether(500)});
+    console.log("successfully issued yield bearing mega cap index: ", await YB_CMI.balanceOf(depositor1.address));
+    await issuanceModule.connect(depositor1).issueWithEther2(YB_SCI.address, 0, [ether(0.3), ether(0.3), ether(0.3), ether(0.1)], depositor1.address, true, {value: ether(500)});
+    console.log("successfully issued yield bearing stable coin index", await YB_SCI.balanceOf(depositor1.address));
+    await issuanceModule.connect(depositor1).issueWithEther2(AEI.address, 0, [ether(0.3), ether(0.2), ether(0.09), ether(0.09), ether(0.09), ether(0.09), ether(0.09)], depositor1.address, true, {value: ether(500)});
+    console.log("successfully issued AEI index", await AEI.balanceOf(depositor1.address));
+
+    const aeiBalancee = await AEI.balanceOf(depositor1.address);
+    const ybcmiBalancee = await YB_CMI.balanceOf(depositor1.address);
+    const ybsciBalancee = await YB_SCI.balanceOf(depositor1.address);
+
+    // Approve and deposit ckTokens
+    await AEI.connect(depositor1).approve(stakingPools.address, aeiBalancee); 
+    await stakingPools.connect(depositor1).deposit(0, aeiBalancee , ZERO_ADDRESS);
+    console.log("stake AEI")
+    await YB_CMI.connect(depositor1).approve(stakingPools.address, ybcmiBalancee); 
+    await stakingPools.connect(depositor1).deposit(1, ybcmiBalancee , ZERO_ADDRESS);
+    console.log("stake YB_CMI")
+    await YB_SCI.connect(depositor1).approve(stakingPools.address, ybsciBalancee); 
+    await stakingPools.connect(depositor1).deposit(2, ybsciBalancee , ZERO_ADDRESS);
+    console.log("stake AEI")
+    await cook.connect(depositor1).approve(stakingPools.address, "100000000000000000000000000"); 
+    await stakingPools.connect(depositor1).deposit(3, "10000000000" , ZERO_ADDRESS);
+    console.log("stake cook")
+
 
     // For testing vesrting reward
     for (var i = 0; i < 5; i++) {
@@ -124,44 +158,46 @@ async function main() {
         await hre().network.provider.send("evm_increaseTime", [86400 * 30]); 
     }
 
-    // For testing referral
-    for (var i = 0; i < depositors.length; i++) {
-      await cli.mint(depositors[i].address, "100000000000000000000000000");
-      await cli.connect(depositors[i]).approve(stakingPools.address, "100000000000000000000000000");
-      const amount = ethers.utils.parseEther((i + 1).toString())
-      await stakingPools.connect(depositors[i]).deposit(0, amount , referrals[i].address);
+    console.log("=== deployment completed ===")
 
-      await cook.mint(depositors[i].address, "100000000000000000000000000");
-      await cook.connect(depositors[i]).approve(stakingPools.address, "100000000000000000000000000");
-      await stakingPools.connect(depositors[i]).deposit(1, amount , ZERO_ADDRESS);
+    // // For testing referral
+    // for (var i = 0; i < depositors.length; i++) {
+    //   await cli.mint(depositors[i].address, "100000000000000000000000000");
+    //   await cli.connect(depositors[i]).approve(stakingPools.address, "100000000000000000000000000");
+    //   const amount = ethers.utils.parseEther((i + 1).toString())
+    //   await stakingPools.connect(depositors[i]).deposit(0, amount , referrals[i].address);
 
-      for (var j = 0; j < 50; j++) {
-        await hre().network.provider.send("evm_mine", []);
-      }
-    }
+    //   await cook.mint(depositors[i].address, "100000000000000000000000000");
+    //   await cook.connect(depositors[i]).approve(stakingPools.address, "100000000000000000000000000");
+    //   await stakingPools.connect(depositors[i]).deposit(1, amount , ZERO_ADDRESS);
 
-    for (var i = 0; i < depositors.length; i++) {
-      await stakingPools.connect(depositors[i]).claim(0);      
-      await stakingPools.connect(depositors[i]).claim(1);
-    }
+    //   for (var j = 0; j < 50; j++) {
+    //     await hre().network.provider.send("evm_mine", []);
+    //   }
+    // }
 
-    await hre().network.provider.send("evm_increaseTime", [86400 * 15]); 
-    await hre().network.provider.send("evm_mine", []);
+    // for (var i = 0; i < depositors.length; i++) {
+    //   await stakingPools.connect(depositors[i]).claim(0);      
+    //   await stakingPools.connect(depositors[i]).claim(1);
+    // }
 
-    const numOfReferrals = stakingPools.connect(cookLPDeployer).nextReferral(0);
-    console.log("====== pool 0 referrals: ======", (await numOfReferrals).toNumber())
+    // await hre().network.provider.send("evm_increaseTime", [86400 * 15]); 
+    // await hre().network.provider.send("evm_mine", []);
 
-    for (var i = 0; i < referrals.length; i++) {  
-      const myReferee = await stakingPools.connect(referrals[i]).getPoolreferee(0, referrals[i].address)
-      var totalRefereeStakeAmount = 0
+    // const numOfReferrals = stakingPools.connect(cookLPDeployer).nextReferral(0);
+    // console.log("====== pool 0 referrals: ======", (await numOfReferrals).toNumber())
 
-      for (var j = 0; j < myReferee.length; j++) {
-        const stake = await stakingPools.connect(referrals[i]).getStakeTotalDeposited(myReferee[j], 0)
-        const refereeStake = toTokenUnitsBN(stake, 18)
-        totalRefereeStakeAmount = totalRefereeStakeAmount + refereeStake
-      }
-      console.log("====== referral power: =======", totalRefereeStakeAmount.toString());
-    }
+    // for (var i = 0; i < referrals.length; i++) {  
+    //   const myReferee = await stakingPools.connect(referrals[i]).getPoolreferee(0, referrals[i].address)
+    //   var totalRefereeStakeAmount = 0
+
+    //   for (var j = 0; j < myReferee.length; j++) {
+    //     const stake = await stakingPools.connect(referrals[i]).getStakeTotalDeposited(myReferee[j], 0)
+    //     const refereeStake = toTokenUnitsBN(stake, 18)
+    //     totalRefereeStakeAmount = totalRefereeStakeAmount + refereeStake
+    //   }
+    //   console.log("====== referral power: =======", totalRefereeStakeAmount.toString());
+    // }
 }
 
 main()
