@@ -23,20 +23,20 @@ async function main() {
 
     const [
       cookLPDeployer,
-      depositor1,
-      depositor2,
-      depositor3,
-      referral1,
-      referral2,
-      referral3,
-      ...signers
+      // depositor1,
+      // depositor2,
+      // depositor3,
+      // referral1,
+      // referral2,
+      // referral3,
+      // ...signers
     ] = await ethers.getSigners();
 
-    const depositors = [depositor1, depositor2, depositor3];
-    const referrals = [referral1, referral2, referral3];
-    for (var i = 0; i < referrals.length; i++) {
-      console.log(referrals[i].address);
-    }
+    // const depositors = [depositor1, depositor2, depositor3];
+    // const referrals = [referral1, referral2, referral3];
+    // for (var i = 0; i < referrals.length; i++) {
+      // console.log(referrals[i].address);
+    // }
 
     
     // required contracts' addresses
@@ -47,12 +47,14 @@ async function main() {
     const UNISWAP_FACTORY_ADDRESS = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-    const MockCOOKFactory = await ethers.getContractFactory("MockCOOK");
-    
-    const cook = (await MockCOOKFactory.connect(cookLPDeployer).deploy("100000000000000000000000000")) as MockCOOK;
+    const Cook_Address = "0x637afeff75ca669ff92e4570b14d6399a658902f"
+    const Cook_WAVA = "0x3fcd1d5450e63fa6af495a601e6ea1230f01c4e3"
+    const YB_SCI = await ethers.getContractAt(ERC20ABI, "0x1967514beb1464857b54aa3e6cbe4fc7d245fa40")
     const AEI = await ethers.getContractAt(ERC20ABI, "0xd3b4a602df2a3abdc0ca241674bcd7566aba4d93")
     const YB_CMI = await ethers.getContractAt(ERC20ABI, "0x6f4a6a855412635668d9ebc69977870a637882ce")
-    const YB_SCI = await ethers.getContractAt(ERC20ABI, "0x1967514beb1464857b54aa3e6cbe4fc7d245fa40")
+    const cook = await ethers.getContractAt(ERC20ABI, Cook_Address)
+    const cook_wava = await ethers.getContractAt(ERC20ABI, Cook_WAVA)
+
 
     const toTokenUnitsBN = (tokenAmount: BigNumber, tokenDecimals: number) => {
       const amt = BigNumber.from(tokenAmount);
@@ -74,6 +76,7 @@ async function main() {
      * Deploy reward vesting
      */
     const rewardVesting = (await RewardVestingFactory.connect(cookLPDeployer).deploy(cookLPDeployer.address)) as RewardVesting;
+    await rewardVesting.deployed();
     console.log("======= Reward Vesting deployed ======= : ", rewardVesting.address);
 
     const stakingPools = (await StakingPoolsFactory.connect(cookLPDeployer).deploy(
@@ -83,80 +86,89 @@ async function main() {
       rewardVesting.address
     )) as StakingPools;
 
-    await cook.mint(depositor1.address, "100000000000000000000000000");
-    await cook.mint(stakingPools.address, "100000000000000000000000000");  
+    await stakingPools.deployed();
+    // await cook.mint(depositor1.address, "100000000000000000000000000");
+    // await cook.mint(stakingPools.address, "100000000000000000000000000");  
 
     console.log("======= Staking program  deployed ======= : ", stakingPools.address);
-    await rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
+    const txn = await rewardVesting.connect(cookLPDeployer).initialize(cook.address, stakingPools.address);
+    await txn.wait()
 
-    const rewardRate = "1000000000000000000";
+    const rewardRate = "1000000000";
       
-    await stakingPools.connect(cookLPDeployer).createPool(AEI.address, true, 86400 * 14, 0);
+    let txn2 = await stakingPools.connect(cookLPDeployer).createPool(cook.address, true, 86400 * 30, 86400 * 180);
+    await txn2.wait()
+    txn2 = await stakingPools.connect(cookLPDeployer).createPool(cook_wava.address, true, 86400 * 30, 0);
+    await txn2.wait()
+    txn2 = await stakingPools.connect(cookLPDeployer).createPool(YB_SCI.address, true, 86400 * 90, 0);
+    await txn2.wait()
+    txn2 = await stakingPools.connect(cookLPDeployer).createPool(YB_CMI.address, true, 86400 * 90, 0);
+    await txn2.wait()
+    txn2 = await stakingPools.connect(cookLPDeployer).createPool(AEI.address, true, 86400 * 90, 0);
+    await txn2.wait()
     // await stakingPools.connect(cookLPDeployer).startReferralBonus(0);
-    await stakingPools.connect(cookLPDeployer).createPool(YB_CMI.address, true, 86400 * 14, 0);
-    await stakingPools.connect(cookLPDeployer).createPool(YB_SCI.address, true, 86400 * 14, 0);
-    await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
-    await stakingPools.connect(cookLPDeployer).createPool(cook.address, true, 86400 * 90, 86400 * 90);
+    txn2 = await stakingPools.connect(cookLPDeployer).setRewardRate(rewardRate);
+    await txn2.wait()
+    txn2 = await stakingPools.connect(cookLPDeployer).setRewardWeights([1, 1, 1, 1, 1]);
+    await txn2.wait()
 
-    await stakingPools.connect(cookLPDeployer).setRewardWeights([1, 2, 3, 4]);
+    // const cliPoolLockupPeriod_AEI = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(0);
+    // const cliPoolVestingDuration_AEI = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(0)
+    // console.log("================ pool AEI lockup period  ================:", cliPoolLockupPeriod_AEI.toNumber())
+    // console.log("================ pool AEI vesting period  ================:", cliPoolVestingDuration_AEI.toNumber())
 
-    const cliPoolLockupPeriod_AEI = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(0);
-    const cliPoolVestingDuration_AEI = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(0)
-    console.log("================ pool AEI lockup period  ================:", cliPoolLockupPeriod_AEI.toNumber())
-    console.log("================ pool AEI vesting period  ================:", cliPoolVestingDuration_AEI.toNumber())
+    // const cookPoolLockupPeriod_MCI = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
+    // const cookPoolVestingDuration_MCI = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
+    // console.log("================ pool MCI lockup period  ================:", cookPoolLockupPeriod_MCI.toNumber())
+    // console.log("================ pool MCI vesting period  ================:", cookPoolVestingDuration_MCI.toNumber())
 
-    const cookPoolLockupPeriod_MCI = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
-    const cookPoolVestingDuration_MCI = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
-    console.log("================ pool MCI lockup period  ================:", cookPoolLockupPeriod_MCI.toNumber())
-    console.log("================ pool MCI vesting period  ================:", cookPoolVestingDuration_MCI.toNumber())
+    // const cookPoolLockupPeriod_SCI = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
+    // const cookPoolVestingDuration_SCI = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
+    // console.log("================ pool SCI lockup period  ================:", cookPoolLockupPeriod_SCI.toNumber())
+    // console.log("================ pool SCI vesting period  ================:", cookPoolVestingDuration_SCI.toNumber())
 
-    const cookPoolLockupPeriod_SCI = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
-    const cookPoolVestingDuration_SCI = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
-    console.log("================ pool SCI lockup period  ================:", cookPoolLockupPeriod_SCI.toNumber())
-    console.log("================ pool SCI vesting period  ================:", cookPoolVestingDuration_SCI.toNumber())
+    // const cookPoolLockupPeriod_CooK = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
+    // const cookPoolVestingDuration_Cook = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
+    // console.log("================ pool Cook lockup period  ================:", cookPoolLockupPeriod_CooK.toNumber())
+    // console.log("================ pool Cook vesting period  ================:", cookPoolVestingDuration_Cook.toNumber())
 
-    const cookPoolLockupPeriod_CooK = await stakingPools.connect(cookLPDeployer).getPoolLockPeriodInSecs(1);
-    const cookPoolVestingDuration_Cook = await stakingPools.connect(cookLPDeployer).getPoolVestingDurationInSecs(1)
-    console.log("================ pool Cook lockup period  ================:", cookPoolLockupPeriod_CooK.toNumber())
-    console.log("================ pool Cook vesting period  ================:", cookPoolVestingDuration_Cook.toNumber())
+    // const issuanceModule = await ethers.getContractAt(issuanceModuleABI, "0xa191074fe860cf39de88679a9d66b8d10a540910")
 
-    const issuanceModule = await ethers.getContractAt(issuanceModuleABI, "0xa191074fe860cf39de88679a9d66b8d10a540910")
+    // // issue CkTokens
+    // await issuanceModule.connect(depositor1).issueWithEther2(YB_CMI.address, 0, [ether(0.6), ether(0.4)], depositor1.address, true, {value: ether(500)});
+    // console.log("successfully issued yield bearing mega cap index: ", await YB_CMI.balanceOf(depositor1.address));
+    // await issuanceModule.connect(depositor1).issueWithEther2(YB_SCI.address, 0, [ether(0.3), ether(0.3), ether(0.3), ether(0.1)], depositor1.address, true, {value: ether(500)});
+    // console.log("successfully issued yield bearing stable coin index", await YB_SCI.balanceOf(depositor1.address));
+    // await issuanceModule.connect(depositor1).issueWithEther2(AEI.address, 0, [ether(0.3), ether(0.2), ether(0.09), ether(0.09), ether(0.09), ether(0.09), ether(0.09)], depositor1.address, true, {value: ether(500)});
+    // console.log("successfully issued AEI index", await AEI.balanceOf(depositor1.address));
 
-    // issue CkTokens
-    await issuanceModule.connect(depositor1).issueWithEther2(YB_CMI.address, 0, [ether(0.6), ether(0.4)], depositor1.address, true, {value: ether(500)});
-    console.log("successfully issued yield bearing mega cap index: ", await YB_CMI.balanceOf(depositor1.address));
-    await issuanceModule.connect(depositor1).issueWithEther2(YB_SCI.address, 0, [ether(0.3), ether(0.3), ether(0.3), ether(0.1)], depositor1.address, true, {value: ether(500)});
-    console.log("successfully issued yield bearing stable coin index", await YB_SCI.balanceOf(depositor1.address));
-    await issuanceModule.connect(depositor1).issueWithEther2(AEI.address, 0, [ether(0.3), ether(0.2), ether(0.09), ether(0.09), ether(0.09), ether(0.09), ether(0.09)], depositor1.address, true, {value: ether(500)});
-    console.log("successfully issued AEI index", await AEI.balanceOf(depositor1.address));
+    // const aeiBalancee = await AEI.balanceOf(depositor1.address);
+    // const ybcmiBalancee = await YB_CMI.balanceOf(depositor1.address);
+    // const ybsciBalancee = await YB_SCI.balanceOf(depositor1.address);
 
-    const aeiBalancee = await AEI.balanceOf(depositor1.address);
-    const ybcmiBalancee = await YB_CMI.balanceOf(depositor1.address);
-    const ybsciBalancee = await YB_SCI.balanceOf(depositor1.address);
-
-    // Approve and deposit ckTokens
-    await AEI.connect(depositor1).approve(stakingPools.address, aeiBalancee); 
-    await stakingPools.connect(depositor1).deposit(0, aeiBalancee , ZERO_ADDRESS);
-    console.log("stake AEI")
-    await YB_CMI.connect(depositor1).approve(stakingPools.address, ybcmiBalancee); 
-    await stakingPools.connect(depositor1).deposit(1, ybcmiBalancee , ZERO_ADDRESS);
-    console.log("stake YB_CMI")
-    await YB_SCI.connect(depositor1).approve(stakingPools.address, ybsciBalancee); 
-    await stakingPools.connect(depositor1).deposit(2, ybsciBalancee , ZERO_ADDRESS);
-    console.log("stake AEI")
-    await cook.connect(depositor1).approve(stakingPools.address, "100000000000000000000000000"); 
-    await stakingPools.connect(depositor1).deposit(3, "10000000000" , ZERO_ADDRESS);
-    console.log("stake cook")
+    // // Approve and deposit ckTokens
+    // await AEI.connect(depositor1).approve(stakingPools.address, aeiBalancee); 
+    // await stakingPools.connect(depositor1).deposit(0, aeiBalancee , ZERO_ADDRESS);
+    // console.log("stake AEI")
+    // await YB_CMI.connect(depositor1).approve(stakingPools.address, ybcmiBalancee); 
+    // await stakingPools.connect(depositor1).deposit(1, ybcmiBalancee , ZERO_ADDRESS);
+    // console.log("stake YB_CMI")
+    // await YB_SCI.connect(depositor1).approve(stakingPools.address, ybsciBalancee); 
+    // await stakingPools.connect(depositor1).deposit(2, ybsciBalancee , ZERO_ADDRESS);
+    // console.log("stake AEI")
+    // await cook.connect(depositor1).approve(stakingPools.address, "100000000000000000000000000"); 
+    // await stakingPools.connect(depositor1).deposit(3, "10000000000" , ZERO_ADDRESS);
+    // console.log("stake cook")
 
 
-    // For testing vesrting reward
-    for (var i = 0; i < 5; i++) {
-        for (var j = 0; j < 50; j++) {
-            await hre().network.provider.send("evm_mine", [])
-        }
-        await stakingPools.connect(cookLPDeployer).claim(0);
-        await hre().network.provider.send("evm_increaseTime", [86400 * 30]); 
-    }
+    // // For testing vesrting reward
+    // for (var i = 0; i < 5; i++) {
+    //     for (var j = 0; j < 50; j++) {
+    //         await hre().network.provider.send("evm_mine", [])
+    //     }
+    //     await stakingPools.connect(cookLPDeployer).claim(0);
+    //     await hre().network.provider.send("evm_increaseTime", [86400 * 30]); 
+    // }
 
     console.log("=== deployment completed ===")
 
