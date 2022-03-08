@@ -10,7 +10,11 @@
     "node-eth": "npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/BCNbfMg2LzXngd0f-2g0oZzSYiamJko9 ",
     "open-referral-ava": "npx hardhat run --network localhost_ava scripts/referral-reward/openAVAReferral.ts",
     "deploy-referral-reward-ava":"npx hardhat run --network localhost_ava scripts/referral-reward/deployAVAReferralReward.ts",
-    "test-referral-reward-ava": "npx hardhat run --network localhost_ava scripts/referral-reward/testReferralReward.ts"
+    "test-referral-reward-ava": "npx hardhat run --network localhost_ava scripts/referral-reward/testReferralReward.ts",
+    "calc-referral-reward-ava": "npx hardhat run --network localhost_ava scripts/referral-reward/calculateAVAReferralReward.ts"
+
+
+    
   },
   "author": "Cook Finance",
   "license": "ISC",
