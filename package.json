@@ -5,7 +5,16 @@
   "main": "index.js",
   "scripts": {
     "compile": "npx hardhat compile",
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "node-ava": "npx hardhat node --fork https://api.avax.network/ext/bc/C/rpc --port 8546",
+    "node-eth": "npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/BCNbfMg2LzXngd0f-2g0oZzSYiamJko9 ",
+    "open-referral-ava": "npx hardhat run --network localhost_ava scripts/referral-reward/openAVAReferral.ts",
+    "deploy-referral-reward-ava":"npx hardhat run --network localhost_ava scripts/referral-reward/deployAVAReferralReward.ts",
+    "test-referral-reward-ava": "npx hardhat run --network localhost_ava scripts/referral-reward/testReferralReward.ts",
+    "calc-referral-reward-ava": "npx hardhat run --network localhost_ava scripts/referral-reward/calculateAVAReferralReward.ts"
+
+
+    
   },
   "author": "Cook Finance",
   "license": "ISC",
@@ -32,6 +41,7 @@
     "@openzeppelin/contracts": "^3.3.0",
     "@uniswap/lib": "^1.1.2",
     "@uniswap/v2-core": "^1.0.1",
+    "ethereumjs-util": "^7.1.4",
     "moment": "^2.29.1"
   }
 }

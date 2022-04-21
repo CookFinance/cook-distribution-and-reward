@@ -18,6 +18,13 @@ task("accounts", "Prints the list of accounts", async (args, hre) => {
 
 module.exports = {
   networks: {
+    hardhat: {
+      throwOnTransactionFailures: true,
+      throwOnCallFailures: true,
+      allowUnlimitedContractSize: true,
+      blockGasLimit: 0x1fffffffffffff,
+      chainId: 43114
+    },
     eth: {
       url: "https://mainnet.infura.io/v3/" + process.env.INFURA_TOKEN,
       // @ts-ignore
@@ -28,14 +35,14 @@ module.exports = {
       // @ts-ignore
       accounts: [`0x${process.env.PRODUCTION_MAINNET_DEPLOY_PRIVATE_KEY}`],
     },
-    // localhost: {
-    //   url: "http://127.0.0.1:8545",
-    //   timeout: 100000,
-    //   gas: "auto",
-    //   blockGasLimit: 20000000,
-    //   allowUnlimitedContractSize: true
-    //   // accounts: getHardhatPrivateKeys(),
-    // },
+    localhost_ava: {
+      url: "http://127.0.0.1:8546",
+      timeout: 100000,
+      gas: "auto",
+      blockGasLimit: 20000000,
+      allowUnlimitedContractSize: true
+      // accounts: getHardhatPrivateKeys(),
+    },
   },
   solidity: {
     version: "0.6.10",
